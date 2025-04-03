@@ -2,7 +2,7 @@
 PYTHON := python
 PIP := pip
 
-.PHONY: all clean install update restore-db drop-db download-files generate-report help
+.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs
 .DEFAULT_GOAL := help
 
 # === Setup ===
@@ -13,6 +13,14 @@ install: ## Установить проект и все зависимости (
 update: ## Обновить проект и все зависимости до последних версий
 	@echo "Обновление проекта и всех зависимостей..."
 	$(PIP) install --upgrade -e .[dev,notebooks]
+
+# === Development ===
+lab: ## Запустить Jupyter Lab (БЕЗ АУТЕНТИФИКАЦИИ!)
+	@echo "Запуск Jupyter Lab на http://localhost:8888/ (или http://<your-ip>:8888/)"
+	@echo "ПРЕДУПРЕЖДЕНИЕ: Запуск без токена/пароля небезопасен!"
+	@echo "Используйте Ctrl+C для остановки."
+	# --ip=0.0.0.0 делает доступным из сети, --IdentityProvider.token='' отключает токен.
+	jupyter lab --ip=0.0.0.0 --port=8888 --IdentityProvider.token=''
 
 # === Database ===
 restore-db: ## Восстановить базы данных (cms, lists, filestorage) из дампов
