@@ -37,8 +37,8 @@ download-files:
 	@echo "Запуск скачивания файлов из хранилища..."
 	python scripts/download_files.py
 
-.PHONY: download-files-threaded
+.PHONY: generate-report
 
-download-files-threaded:
-	@echo "Запуск МНОГОПОТОЧНОГО скачивания файлов из хранилища..."
-	python scripts/download_files_threaded.py 
+generate-report:
+	@echo "Генерация отчета по скачанным файлам..."
+	python scripts/generate_file_report.py
