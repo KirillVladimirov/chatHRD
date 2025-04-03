@@ -1,0 +1,42 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chathrd"
+version = "0.1.0"
+description = "Прототип поисковой системы на базе LLM для VK HR Tek"
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [
+  { name="Your Name", email="you@example.com" }, # Замени на свои данные
+]
+dependencies = [
+    "python-dotenv",
+    "psycopg2-binary", # Для работы с PostgreSQL
+    "requests",        # Для выполнения HTTP-запросов
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License", # Или другая лицензия, если нужно
+    "Operating System :: OS Independent",
+]
+
+[project.optional-dependencies]
+notebooks = [
+    "jupyterlab",
+    "ipywidgets", # Для интерактивных виджетов в ноутбуках
+]
+dev = [
+    "pytest>=6.0", # Для запуска тестов
+    "pytest-cov",  # Для отчетов о покрытии тестами
+    "ruff",        # Линтер и форматтер
+    "mypy",        # Статический анализатор типов
+]
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+] 
