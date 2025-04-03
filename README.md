@@ -83,7 +83,7 @@
 
 7.  **Скачать файлы:**
     ```bash
-    make download-files-threaded
+    make download-files
     ```
     Эта команда запустит многопоточное скачивание файлов (контент из `filestorage`) с внешнего хранилища в директорию `data/downloaded_files/`. По умолчанию используется 10 потоков (можно изменить переменной `DOWNLOAD_WORKERS` в `.env`).
     
