@@ -115,4 +115,12 @@ dmypy.json
 .idea/
 .vscode/
 
-data/downloaded_files/
+# Игнорирование контента данных, кроме .gitkeep
+data/downloaded_files/*
+!data/downloaded_files/.gitkeep
+data/parsed_files/*
+!data/parsed_files/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/final/*
+!data/final/.gitkeep
