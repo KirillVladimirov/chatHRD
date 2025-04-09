@@ -1,20 +1,30 @@
 [build-system]
-requires = ["setuptools>=61.0"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "chathrd"
 version = "0.1.0"
-description = "Прототип поисковой системы на базе LLM для VK HR Tek"
+description = "ChatHRD - система для работы с HR документами"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.8"
 authors = [
-  { name="Your Name", email="you@example.com" }, # Замени на свои данные
+  { name="Your Name", email="your.email@example.com" }, # Замени на свои данные
 ]
 dependencies = [
     "python-dotenv",
     "psycopg2-binary", # Для работы с PostgreSQL
     "requests",        # Для выполнения HTTP-запросов
+    "python-docx==1.1.0",
+    "PyMuPDF==1.23.8",
+    "pandas==2.2.1",
+    "openpyxl>=3.1.2",
+    "tabulate==0.9.0",
+    "xlrd>=2.0.1",  # Для поддержки старых форматов Excel
+    "ebooklib>=0.18",
+    "chardet>=5.2.0",
+    "pytesseract==0.3.10",
+    "Pillow==10.2.0"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -24,16 +34,17 @@ classifiers = [
 
 [project.optional-dependencies]
 notebooks = [
-    "jupyterlab",
+    "jupyter>=1.0.0",
+    "ipykernel>=6.0.0",
     "ipywidgets", # Для интерактивных виджетов в ноутбуках
-    "pandas",     # Для анализа данных и отображения таблиц
     "graphviz",   # Для визуализации графов (схем БД)
 ]
 dev = [
-    "pytest>=6.0", # Для запуска тестов
-    "pytest-cov",  # Для отчетов о покрытии тестами
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "ruff>=0.1.0",
+    "mypy>=1.0.0",
     "ruff",        # Линтер и форматтер
-    "mypy",        # Статический анализатор типов
 ]
 
 [tool.pytest.ini_options]
@@ -41,4 +52,22 @@ minversion = "6.0"
 addopts = "-ra -q"
 testpaths = [
     "tests",
-] 
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py38"
+
+[tool.ruff.lint]
+select = ["E", "F", "B", "I", "N", "UP", "PL", "RUF"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.8"
+strict = true
+ignore_missing_imports = true 

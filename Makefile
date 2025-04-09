@@ -1,16 +1,26 @@
 # === Variables ===
 PYTHON := python
 PIP := pip
+PYTHONPATH := $(shell pwd)
 
-.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs
+# === Targets ===
+.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs parse-docs test lint format check-system-deps install-system-deps
 .DEFAULT_GOAL := help
 
 # === Setup ===
-install: ## Установить проект и все зависимости (основные, dev, notebooks)
+install-system-deps: ## Установить системные зависимости
+	@echo "Установка системных зависимостей..."
+	@command -v graphviz >/dev/null 2>&1 || { echo "Установка graphviz..."; sudo apt-get install -y graphviz; }
+	@command -v antiword >/dev/null 2>&1 || { echo "Установка antiword..."; sudo apt-get install -y antiword; }
+	@command -v unrtf >/dev/null 2>&1 || { echo "Установка unrtf..."; sudo apt-get install -y unrtf; }
+	@command -v pandoc >/dev/null 2>&1 || { echo "Установка pandoc..."; sudo apt-get install -y pandoc; }
+	@echo "Все системные зависимости установлены."
+
+install: install-system-deps ## Установить проект и все зависимости (основные, dev, notebooks)
 	@echo "Установка проекта и всех зависимостей..."
 	$(PIP) install -e .[dev,notebooks]
 
-update: ## Обновить проект и все зависимости до последних версий
+update: install-system-deps ## Обновить проект и все зависимости до последних версий
 	@echo "Обновление проекта и всех зависимостей..."
 	$(PIP) install --upgrade -e .[dev,notebooks]
 
@@ -19,7 +29,6 @@ lab: ## Запустить Jupyter Lab (БЕЗ АУТЕНТИФИКАЦИИ!)
 	@echo "Запуск Jupyter Lab на http://localhost:8888/ (или http://<your-ip>:8888/)"
 	@echo "ПРЕДУПРЕЖДЕНИЕ: Запуск без токена/пароля небезопасен!"
 	@echo "Используйте Ctrl+C для остановки."
-	# --ip=0.0.0.0 делает доступным из сети, --IdentityProvider.token='' отключает токен.
 	jupyter lab --ip=0.0.0.0 --port=8888 --IdentityProvider.token=''
 
 # === Database ===
@@ -34,7 +43,7 @@ drop-db: ## (!!!) Удалить проектные базы данных (cms, 
 # === Files ===
 download-files: ## Скачать файлы контента (многопоточно)
 	@echo "Запуск МНОГОПОТОЧНОГО скачивания файлов из хранилища..."
-	$(PYTHON) scripts/download_files_threaded.py
+	$(PYTHON) scripts/download_files.py
 
 generate-report: ## Сгенерировать отчет по скачанным файлам (logs/file_report.md)
 	@echo "Генерация отчета по скачанным файлам..."
@@ -50,6 +59,30 @@ clean: ## Очистить проект от временных файлов (*.
 	find . -type d -name 'htmlcov' -exec rm -rf {} +
 	find . -type f -name '.coverage*' -delete
 	rm -rf build/ dist/ *.egg-info/
+
+# === Testing ===
+test: ## Запустить тесты с покрытием
+	PYTHONPATH=$(PYTHONPATH) pytest tests/ -v --cov=chathrd
+
+lint: ## Проверить код линтерами
+	PYTHONPATH=$(PYTHONPATH) ruff check src/chathrd tests
+
+format: ## Отформатировать код
+	PYTHONPATH=$(PYTHONPATH) ruff format src/chathrd tests
+
+# === Document Processing ===
+parse-docs: check-system-deps ## Парсить документы из списка
+	@echo "Парсинг документов..."
+	@mkdir -p data/parsed_files
+	@PYTHONPATH=$(PYTHONPATH) python scripts/parse_documents.py
+	@echo "Результаты сохранены в data/parsed_files/"
+
+check-system-deps: ## Проверить наличие системных зависимостей
+	@command -v dot >/dev/null 2>&1 || { echo "Требуется graphviz. Установите: sudo apt-get install graphviz"; exit 1; }
+	@command -v antiword >/dev/null 2>&1 || { echo "Требуется antiword. Установите: sudo apt-get install antiword"; exit 1; }
+	@command -v unrtf >/dev/null 2>&1 || { echo "Требуется unrtf. Установите: sudo apt-get install unrtf"; exit 1; }
+	@command -v pandoc >/dev/null 2>&1 || { echo "Требуется pandoc. Установите: sudo apt-get install pandoc"; exit 1; }
+	@command -v tesseract >/dev/null 2>&1 || { echo "Требуется tesseract. Установите: sudo apt-get install tesseract-ocr tesseract-ocr-rus"; exit 1; }
 
 # === Help ===
 help: ## Показать это справочное сообщение

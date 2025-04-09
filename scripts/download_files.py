@@ -38,23 +38,33 @@ def get_db_connection(pg_user: str, pg_password: str, pg_host: str, pg_port: str
         return None
 
 def get_file_list_from_db(conn) -> List[Tuple[str, str]]:
-    """Получает список файлов (имя, относительный путь) из БД filestorage."""
+    """Получает список файлов (имя, относительный путь) из БД filestorage.
+       Фильтрует файлы по разрешенным расширениям."""
     files_to_download = []
     if not conn:
         return files_to_download
+    
+    # Список разрешенных расширений (в нижнем регистре)
+    allowed_extensions = ('.pdf', '.csv', '.json', '.doc', '.docx', '.epub', '.txt', '.xls', '.xlsx', '.yml')
 
     query = """
         SELECT so.name, sv.link
         FROM storage_storageobject AS so
         JOIN storage_version AS sv ON so.version_id = sv.id
-        WHERE so.type = 1 AND sv.link IS NOT NULL AND sv.link <> '';
+        WHERE so.type = 1 
+          AND sv.link IS NOT NULL 
+          AND sv.link <> ''
+          AND lower(so.name) LIKE ANY(%(ext)s)
     """
+    # Создаем паттерны для SQL LIKE ANY
+    like_patterns = [f"%{ext}" for ext in allowed_extensions]
+
     try:
         with conn.cursor() as cursor:
-            cursor.execute(query)
+            cursor.execute(query, {'ext': like_patterns})
             results = cursor.fetchall()
             files_to_download = [(row[0], row[1]) for row in results]
-            print(f"Найдено {len(files_to_download)} файлов в БД для скачивания.", file=sys.stderr)
+            print(f"Найдено {len(files_to_download)} файлов с разрешенными расширениями в БД для скачивания.", file=sys.stderr)
     except (Exception, psycopg2.Error) as error:
         print(f"Ошибка при выполнении запроса к БД: {error}", file=sys.stderr)
         conn.rollback()
