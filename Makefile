@@ -2,9 +2,10 @@
 PYTHON := python
 PIP := pip
 PYTHONPATH := $(shell pwd)
+DOCKER_COMPOSE := sudo docker compose # Используем sudo, так как у пользователя проблемы с правами
 
 # === Targets ===
-.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs parse-docs test lint format check-system-deps install-system-deps run-telegram-bot
+.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs parse-docs test lint format check-system-deps install-system-deps run-telegram-bot docker-up docker-down docker-down-v docker-ps docker-logs docker-logs-bot docker-stop
 .DEFAULT_GOAL := help
 
 # === Setup ===
@@ -71,10 +72,39 @@ format: ## Отформатировать код
 	PYTHONPATH=$(PYTHONPATH) ruff format src/chathrd tests
 
 # === Running Services ===
-run-telegram-bot: ## Запустить Telegram бота
+run-telegram-bot: ## Запустить Telegram бота локально (без Docker)
 	@echo "Запуск Telegram бота..."
 	@echo "Нажмите Ctrl+C для остановки."
 	PYTHONPATH=$(PYTHONPATH) $(PYTHON) telegram_bot/bot.py
+
+# === Docker ===
+docker-up: ## Собрать образы и запустить контейнеры Docker в фоновом режиме
+	@echo "Сборка образов и запуск контейнеров Docker..."
+	$(DOCKER_COMPOSE) up --build -d
+
+docker-down: ## Остановить и удалить контейнеры Docker (тома сохраняются)
+	@echo "Остановка и удаление контейнеров Docker..."
+	$(DOCKER_COMPOSE) down
+
+docker-down-v: ## Остановить и удалить контейнеры И ТОМА Docker
+	@echo "Остановка и удаление контейнеров и томов Docker..."
+	$(DOCKER_COMPOSE) down -v
+
+docker-ps: ## Показать статус контейнеров Docker
+	@echo "Статус контейнеров Docker:"
+	$(DOCKER_COMPOSE) ps
+
+docker-logs: ## Показать логи всех контейнеров Docker (-f для слежения)
+	@echo "Просмотр логов всех контейнеров Docker (нажмите Ctrl+C для выхода)..."
+	$(DOCKER_COMPOSE) logs -f
+
+docker-logs-bot: ## Показать логи контейнера telegram_bot (-f для слежения)
+	@echo "Просмотр логов контейнера telegram_bot (нажмите Ctrl+C для выхода)..."
+	$(DOCKER_COMPOSE) logs -f telegram_bot
+
+docker-stop: ## Остановить запущенные контейнеры Docker (без удаления)
+	@echo "Остановка контейнеров Docker..."
+	$(DOCKER_COMPOSE) stop
 
 # === Document Processing ===
 parse-docs: check-system-deps ## Парсить документы из списка

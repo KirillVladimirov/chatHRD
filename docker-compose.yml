@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:13-alpine # Используем легковесный образ Alpine
+    container_name: chathrd_db
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-user} # Используем переменные из .env или значения по умолчанию
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-chathrd_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432" # Пробрасываем порт контейнера 5432 на порт хоста 5433
+    networks:
+      - app_net
+    restart: unless-stopped
+
+  telegram_bot:
+    container_name: chathrd_telegram_bot
+    build:
+      context: .
+      dockerfile: telegram_bot/Dockerfile
+    env_file:
+      - .env # Передаем переменные из .env файла
+    environment:
+      # Переопределяем DATABASE_URL для использования имени сервиса Docker
+      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-chathrd_db}
+      PYTHONUNBUFFERED: 1 # Для немедленного вывода логов Python в Docker
+    depends_on:
+      - db
+    networks:
+      - app_net
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local # Указываем драйвер тома
+
+networks:
+  app_net:
+    driver: bridge # Используем стандартный драйвер сети 
