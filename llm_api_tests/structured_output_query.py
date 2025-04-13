@@ -3,10 +3,10 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 
 # --- Конфигурация --- 
-# Укажите базовый URL вашего локального API
-LOCAL_API_BASE = "http://127.0.0.1:1337/v1"
-API_KEY = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" # Фиктивный ключ
-MODEL_NAME = "ggml-model-Q8_0.gguf" # Модель вашего локального сервера
+# Используем OpenAI-совместимый API, который Ollama предоставляет из коробки
+LOCAL_API_BASE = "http://localhost:11434/v1"
+API_KEY = "ollama" # API ключ (может быть любым для Ollama)
+MODEL_NAME = "hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q8_0" # Модель из проекта
 
 # --- Клиент OpenAI --- 
 try:

@@ -124,3 +124,7 @@ data/processed/*
 !data/processed/.gitkeep
 data/final/*
 !data/final/.gitkeep
+data/ollama/
+project/
+.cursor/
+

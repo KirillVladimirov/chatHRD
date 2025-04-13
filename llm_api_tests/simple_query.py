@@ -2,16 +2,15 @@ import os
 from openai import OpenAI
 
 # --- Конфигурация --- 
-# Укажите базовый URL вашего локального API
-# Убедитесь, что он соответствует формату OpenAI API
-LOCAL_API_BASE = "http://127.0.0.1:1337/v1"
+# Используем OpenAI-совместимый API, который Ollama предоставляет из коробки
+LOCAL_API_BASE = "http://localhost:11434/v1"
 
-# API ключ не обязателен для многих локальных серверов, но библиотека требует его.
-# Можно использовать фиктивный ключ.
-API_KEY = "sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+# API ключ не обязателен для Ollama, но библиотека требует его
+# Можно использовать любое значение, например 'ollama'
+API_KEY = "ollama"
 
-# Модель, которую использует ваш локальный сервер (укажите правильное имя)
-MODEL_NAME = "ggml-model-Q8_0.gguf" 
+# Модель, которую использует локальный сервер Ollama
+MODEL_NAME = "hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q8_0"
 
 # --- Клиент OpenAI --- 
 try:
