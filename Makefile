@@ -5,7 +5,7 @@ PYTHONPATH := $(shell pwd)
 DOCKER_COMPOSE := sudo docker compose # Используем sudo, так как у пользователя проблемы с правами
 
 # === Targets ===
-.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs parse-docs test lint format check-system-deps install-system-deps run-telegram-bot docker-up docker-down docker-down-v docker-ps docker-logs docker-logs-bot docker-stop
+.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs parse-docs test lint format check-system-deps install-system-deps run-telegram-bot docker-up docker-down docker-down-v docker-ps docker-logs docker-logs-bot docker-logs-llm docker-stop
 .DEFAULT_GOAL := help
 
 # === Setup ===
@@ -101,6 +101,10 @@ docker-logs: ## Показать логи всех контейнеров Docker
 docker-logs-bot: ## Показать логи контейнера telegram_bot (-f для слежения)
 	@echo "Просмотр логов контейнера telegram_bot (нажмите Ctrl+C для выхода)..."
 	$(DOCKER_COMPOSE) logs -f telegram_bot
+
+docker-logs-llm: ## Показать логи контейнера llm_service (-f для слежения)
+	@echo "Просмотр логов контейнера llm_service (нажмите Ctrl+C для выхода)..."
+	$(DOCKER_COMPOSE) logs -f llm_service
 
 docker-stop: ## Остановить запущенные контейнеры Docker (без удаления)
 	@echo "Остановка контейнеров Docker..."

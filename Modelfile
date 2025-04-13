@@ -1,0 +1,2 @@
+# Используется модель из переменной MODEL_NAME в .env
+FROM {{MODEL_NAME}}

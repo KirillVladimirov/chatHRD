@@ -1,40 +1,100 @@
+version: '3.8'
+
 services:
   db:
-    image: postgres:13-alpine # Используем легковесный образ Alpine
     container_name: chathrd_db
+    image: postgres:13-alpine # Используем легковесный образ Alpine
+    ports:
+      - "${POSTGRES_PORT}:5432"
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-user} # Используем переменные из .env или значения по умолчанию
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
-      POSTGRES_DB: ${POSTGRES_DB:-chathrd_db}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "${POSTGRES_PORT:-5433}:5432" # Пробрасываем порт контейнера 5432 на порт хоста 5433
     networks:
       - app_net
     restart: unless-stopped
+
+  ollama:
+    container_name: ollama_service
+    build:
+      context: ./ollama_service
+      dockerfile: Dockerfile
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./data/ollama:/root/.ollama
+      - ./ollama_service:/app
+      - ollama_status:/tmp/ollama_status # Общий том для хранения статус-файлов
+    networks:
+      - app_net
+    environment:
+      - OLLAMA_ORIGINS=${OLLAMA_ORIGINS}
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_GPU_LAYERS=35
+      - CUDA_VISIBLE_DEVICES=0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  model_initializer:
+    container_name: model_initializer
+    build:
+      context: ./ollama_service
+      dockerfile: Dockerfile
+    volumes:
+      - ./data/ollama:/root/.ollama
+      - ollama_status:/tmp/ollama_status # Общий том для хранения статус-файлов
+    networks:
+      - app_net
+    environment:
+      - OLLAMA_HOST=ollama # Имя сервиса для доступа через Docker сеть
+      - OLLAMA_API_URL=http://ollama:11434 # Полный URL для API через Docker сеть
+      - OLLAMA_GPU_LAYERS=35
+      - CUDA_VISIBLE_DEVICES=0
+      - MODEL_NAME=${MODEL_NAME}
+    depends_on:
+      ollama:
+        condition: service_healthy # Ждем, пока Ollama будет здорова
+    restart: "on-failure" # Перезапускать только при сбое
+    entrypoint: ["/bin/bash", "/init.sh"]
+    command: ""
 
   telegram_bot:
     container_name: chathrd_telegram_bot
     build:
       context: .
       dockerfile: telegram_bot/Dockerfile
+    volumes:
+      - ollama_status:/tmp/ollama_status # Общий том для хранения статус-файлов
     env_file:
       - .env # Передаем переменные из .env файла
     environment:
-      # Переопределяем DATABASE_URL для использования имени сервиса Docker
-      DATABASE_URL: postgresql://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@db:5432/${POSTGRES_DB:-chathrd_db}
-      PYTHONUNBUFFERED: 1 # Для немедленного вывода логов Python в Docker
+      - LLM_API_URL=http://ollama:11434
+      - MODEL_NAME=${MODEL_NAME}
     depends_on:
-      - db
+      model_initializer:
+        condition: service_completed_successfully # Ждем успешного завершения инициализации модели
     networks:
       - app_net
-    restart: unless-stopped
+    restart: on-failure
 
 volumes:
   postgres_data:
-    driver: local # Указываем драйвер тома
+  ollama_status: # Новый том для хранения статус-файлов
 
 networks:
   app_net:
-    driver: bridge # Используем стандартный драйвер сети 
+    driver: bridge # Используем стандартный драйвер сети

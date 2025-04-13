@@ -10,7 +10,9 @@ from telegram.ext import (
     CommandHandler,
     MessageHandler,
     filters,
+    ContextTypes,
 )
+from ollama_client import OllamaClient
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -25,21 +27,29 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Инициализация клиента Ollama
+ollama_client = OllamaClient()
 
-async def start(update: Update, context: CallbackContext) -> None:
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение при команде /start."""
     if update.message:
         await update.message.reply_text(
-            "Привет! Я эхо-бот. Отправь мне сообщение, и я его повторю."
+            "Привет! Я бот с интегрированной моделью Llama. Отправьте мне сообщение, и я отвечу."
         )
 
-
-async def echo(update: Update, context: CallbackContext) -> None:
-    """Повторяет полученное текстовое сообщение."""
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Обрабатывает входящее сообщение и отправляет запрос в LLM."""
     if update.message and update.message.text:
-        logger.info(f"Получено сообщение от пользователя: {update.message.text}")
-        await update.message.reply_text(update.message.text)
-
+        user_message = update.message.text
+        logger.info(f"Получено сообщение от пользователя: {user_message}")
+        
+        # Отправляем сообщение в LLM
+        llm_response = ollama_client.generate_response(user_message)
+        
+        if llm_response:
+            await update.message.reply_text(llm_response)
+        else:
+            await update.message.reply_text("Извините, произошла ошибка при обработке вашего сообщения.")
 
 def main() -> None:
     """Запускает бота."""
@@ -55,7 +65,7 @@ def main() -> None:
     # Регистрация обработчиков
     application.add_handler(CommandHandler("start", start))
     application.add_handler(
-        MessageHandler(filters.TEXT & ~filters.COMMAND, echo)
+        MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message)
     )
 
     # Запуск бота
