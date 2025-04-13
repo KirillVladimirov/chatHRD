@@ -6,7 +6,6 @@ from dotenv import load_dotenv
 from telegram import Update
 from telegram.ext import (
     Application,
-    CallbackContext,
     CommandHandler,
     MessageHandler,
     filters,
@@ -43,11 +42,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         user_message = update.message.text
         logger.info(f"Получено сообщение от пользователя: {user_message}")
         
+        # Отправляем индикацию набора текста
+        await update.message.chat.send_action(action="typing")
+        
         # Отправляем сообщение в LLM
         llm_response = ollama_client.generate_response(user_message)
         
         if llm_response:
-            await update.message.reply_text(llm_response)
+            # Разбиваем длинные сообщения на части, если необходимо
+            if len(llm_response) > 4000:
+                chunks = [llm_response[i:i+4000] for i in range(0, len(llm_response), 4000)]
+                for chunk in chunks:
+                    await update.message.reply_text(chunk)
+            else:
+                await update.message.reply_text(llm_response)
         else:
             await update.message.reply_text("Извините, произошла ошибка при обработке вашего сообщения.")
 

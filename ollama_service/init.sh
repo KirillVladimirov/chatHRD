@@ -5,7 +5,8 @@ set -e  # Выходить при ошибке
 MODEL_NAME="${MODEL_NAME:-hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q8_0}"
 STATUS_DIR="/tmp/ollama_status"
 STATUS_FILE="${STATUS_DIR}/model_loaded"
-OLLAMA_API_URL="${OLLAMA_API_URL:-http://localhost:11434}"
+# Внутри Docker сети используем имя сервиса "ollama" вместо localhost
+OLLAMA_API_URL="${LLM_API_URL:-http://ollama:11434}"
 
 echo "========================================================"
 echo "Инициализация модели $MODEL_NAME"
@@ -74,4 +75,4 @@ echo "Статус записан в ${STATUS_FILE}"
 echo "========================================================"
 
 # Успешное завершение (контейнер завершит работу)
-exit 0 
+exit 0

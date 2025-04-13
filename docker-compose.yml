@@ -1,9 +1,7 @@
-version: '3.8'
-
 services:
   db:
     container_name: chathrd_db
-    image: postgres:13-alpine # Используем легковесный образ Alpine
+    image: postgres:13-alpine
     ports:
       - "${POSTGRES_PORT}:5432"
     environment:
@@ -32,7 +30,7 @@ services:
     environment:
       - OLLAMA_ORIGINS=${OLLAMA_ORIGINS}
       - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_GPU_LAYERS=35
+      - OLLAMA_GPU_LAYERS=${OLLAMA_GPU_LAYERS}
       - CUDA_VISIBLE_DEVICES=0
     deploy:
       resources:
@@ -61,8 +59,8 @@ services:
       - app_net
     environment:
       - OLLAMA_HOST=ollama # Имя сервиса для доступа через Docker сеть
-      - OLLAMA_API_URL=http://ollama:11434 # Полный URL для API через Docker сеть
-      - OLLAMA_GPU_LAYERS=35
+      - OLLAMA_API_URL=${LLM_API_URL} # Берем URL из переменной окружения
+      - OLLAMA_GPU_LAYERS=${OLLAMA_GPU_LAYERS}
       - CUDA_VISIBLE_DEVICES=0
       - MODEL_NAME=${MODEL_NAME}
     depends_on:
@@ -82,7 +80,7 @@ services:
     env_file:
       - .env # Передаем переменные из .env файла
     environment:
-      - LLM_API_URL=http://ollama:11434
+      - LLM_API_URL=${LLM_API_URL}
       - MODEL_NAME=${MODEL_NAME}
     depends_on:
       model_initializer:
@@ -97,4 +95,4 @@ volumes:
 
 networks:
   app_net:
-    driver: bridge # Используем стандартный драйвер сети
+    driver: bridge

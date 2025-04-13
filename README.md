@@ -171,6 +171,16 @@
     make docker-logs-llm # Показать логи только LLM сервиса (нажмите Ctrl+C для выхода)
     ```
 
+    Для просмотра логов с отслеживанием новых сообщений:
+    ```bash
+    make docker-logs-bot-follow # Показать логи бота с постоянным отслеживанием (аналог -f)
+    ```
+
+    Для просмотра истории запросов и ответов телеграм-бота непосредственно в контейнере:
+    ```bash
+    sudo docker compose exec telegram_bot cat /app/logs/bot.log
+    ```
+
 6.  **Остановка контейнеров:**
     ```bash
     make docker-down   # Остановить и удалить контейнеры (тома сохраняются)
@@ -191,6 +201,26 @@
       ```bash
       sudo docker compose exec llm_service ollama pull <название_модели>
       sudo docker compose exec llm_service ollama run <название_модели> "Ваш промпт"
+      ```
+    *   Для скачивания конкретной модели, используемой в проекте:
+      ```bash
+      sudo docker compose exec ollama ollama pull hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q4_K_M
+      ```
+    *   Для просмотра списка скачанных моделей:
+      ```bash
+      sudo docker compose exec ollama ollama list
+      ```
+    *   Для просмотра подробной информации о модели (включая количество слоев):
+      ```bash
+      sudo docker compose exec ollama ollama show <название_модели>
+      ```
+      Например:
+      ```bash
+      sudo docker compose exec ollama ollama show hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q8_0
+      ```
+    *   Для просмотра логов внутри контейнера:
+      ```bash
+      sudo docker compose exec ollama cat /var/log/ollama/ollama.log
       ```
     *   Если вы хотите иметь доступ к Ollama API с вашего хост-компьютера (например, для тестов через Postman или curl), раскомментируйте секцию `ports` для `llm_service` в `docker-compose.yml`.
 
