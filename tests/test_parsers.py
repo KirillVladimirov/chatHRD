@@ -6,7 +6,7 @@ import pandas as pd
 from docx import Document
 import fitz
 from pathlib import Path
-from chathrd import parse_file, parse_pdf, parse_docx, parse_xlsx, parse_csv, parse_txt
+from chathrd.parsers.base import parse_file, parse_pdf, parse_docx, parse_xlsx, parse_csv, parse_txt
 from tests.constants import TEST_FILES_DIR
 from tests.utils import (
     create_pdf_file,

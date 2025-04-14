@@ -5,7 +5,7 @@ PYTHONPATH := $(shell pwd)
 DOCKER_COMPOSE := sudo docker compose # Используем sudo, так как у пользователя проблемы с правами
 
 # === Targets ===
-.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs parse-docs test lint format check-system-deps install-system-deps run-telegram-bot docker-up docker-down docker-down-v docker-ps docker-logs docker-logs-bot docker-logs-bot-follow docker-logs-llm docker-stop
+.PHONY: all clean install update restore-db drop-db download-files generate-report help lab generate-schema-docs parse-docs test lint format check-system-deps install-system-deps run-telegram-bot docker-up docker-down docker-down-v docker-ps docker-logs docker-logs-bot docker-logs-bot-follow docker-logs-llm docker-stop run-rag-indexing run-rag-test rag-query install-rag
 .DEFAULT_GOAL := help
 
 # === Setup ===
@@ -15,6 +15,7 @@ install-system-deps: ## Установить системные зависимо
 	@command -v antiword >/dev/null 2>&1 || { echo "Установка antiword..."; sudo apt-get install -y antiword; }
 	@command -v unrtf >/dev/null 2>&1 || { echo "Установка unrtf..."; sudo apt-get install -y unrtf; }
 	@command -v pandoc >/dev/null 2>&1 || { echo "Установка pandoc..."; sudo apt-get install -y pandoc; }
+	@command -v tesseract >/dev/null 2>&1 || { echo "Установка tesseract..."; sudo apt-get install -y tesseract-ocr tesseract-ocr-rus; }
 	@echo "Все системные зависимости установлены."
 
 install: install-system-deps ## Установить проект и все зависимости (основные, dev, notebooks)
@@ -131,3 +132,25 @@ check-system-deps: ## Проверить наличие системных за�
 # === Help ===
 help: ## Показать это справочное сообщение
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@echo "  run-rag-indexing   : Индексировать документы для RAG системы"
+	@echo "  run-rag-test       : Запустить интерактивное тестирование RAG"
+	@echo "  rag-query          : Отправить запрос к RAG системе"
+	@echo "  install-rag        : Установить зависимости для RAG системы"
+
+# Поисковая система RAG
+run-rag-indexing:
+	@echo "Индексация документов для RAG системы..."
+	python scripts/run_rag_indexing.py --docs-dir data/parsed_files --force
+
+run-rag-test:
+	@echo "Тестирование RAG системы в интерактивном режиме..."
+	python scripts/test_rag_query.py --interactive
+
+rag-query:
+	@echo "Отправка запроса к RAG системе..."
+	@read -p "Введите запрос: " query; \
+	python scripts/test_rag_query.py --query "$$query"
+
+install-rag:
+	@echo "Установка зависимостей для RAG системы..."
+	pip install -e ".[rag]"

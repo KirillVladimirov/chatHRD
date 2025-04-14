@@ -16,7 +16,7 @@ COPY src /app/src
 
 # Устанавливаем зависимости проекта
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir ".[dev]" && \
+    pip install --no-cache-dir ".[dev,rag]" && \
     pip install -e .
 
 # Установка openai

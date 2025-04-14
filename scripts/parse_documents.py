@@ -4,7 +4,7 @@
 import os
 import logging
 from pathlib import Path
-from chathrd import parse_file
+from chathrd.parsers.base import parse_file
 
 # Настройка логирования
 logging.basicConfig(

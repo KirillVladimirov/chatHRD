@@ -26,7 +26,8 @@ dependencies = [
     "chardet>=5.2.0",
     "pytesseract==0.3.10",
     "Pillow==10.2.0",
-    "openai>=1.0.0"   # Добавлено для работы с LLM API
+    "openai>=1.0.0",   # Добавлено для работы с LLM API
+    "graphviz>=0.20.1",
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
@@ -37,16 +38,20 @@ classifiers = [
 [project.optional-dependencies]
 notebooks = [
     "jupyter>=1.0.0",
-    "ipykernel>=6.0.0",
-    "ipywidgets", # Для интерактивных виджетов в ноутбуках
-    "graphviz",   # Для визуализации графов (схем БД)
+    "ipykernel>=6.25.2",
+    "ipywidgets>=8.1.1",
 ]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-cov>=4.0.0",
-    "ruff>=0.1.0",
-    "mypy>=1.0.0",
-    "ruff",        # Линтер и форматтер
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "ruff>=0.0.292",
+    "mypy>=1.5.1",
+]
+rag = [
+    "haystack",
+    "haystack-ai",
+    "sentence-transformers",
+    "datasets",
 ]
 
 [tool.pytest.ini_options]

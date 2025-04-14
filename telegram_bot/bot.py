@@ -11,7 +11,7 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
-from ollama_client import OllamaClient
+from chathrd.llm import Client
 
 # Загрузка переменных окружения
 load_dotenv()
@@ -34,7 +34,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Инициализация клиента Ollama
-ollama_client = OllamaClient()
+ollama_client = Client()
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Отправляет приветственное сообщение при команде /start."""
