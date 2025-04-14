@@ -19,10 +19,17 @@ load_dotenv()
 # Константы
 TELEGRAM_BOT_TOKEN: Final[str | None] = os.getenv("TELEGRAM_BOT_TOKEN")
 
-# Настройка логирования
+# Создаем директорию для логов, если её нет
+os.makedirs("/app/logs", exist_ok=True)
+
+# Настраиваем логирование в файл и консоль
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
+    handlers=[
+        logging.FileHandler("/app/logs/bot.log"),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 

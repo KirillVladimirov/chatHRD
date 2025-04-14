@@ -23,6 +23,8 @@
 ├── .gitignore             # Файл для исключения файлов из Git
 ├── Makefile               # Файл с командами для управления проектом (установка, очистка, работа с БД)
 ├── README.md              # Этот файл
+├── Modelfile              # Файл конфигурации для моделей Ollama
+├── docker-compose.yml     # Конфигурация Docker для развертывания сервисов
 ├── data/
 │   ├── downloaded_files/  # Скачанные файлы с разрешенными расширениями
 │   ├── parsed_files/      # Документы, преобразованные в Markdown
@@ -37,12 +39,22 @@
 │   ├── db_diagrams/       # Визуальные схемы БД (PNG, генерируются)
 │   ├── download_errors.log # Лог ошибок скачивания файлов
 │   ├── download_stats.log  # Лог статистики скачивания файлов
+│   ├── bot.log            # Лог работы Telegram бота
+│   ├── ollama.log         # Лог работы Ollama сервиса
 │   └── file_report.md     # Отчет по типам скачанных файлов (генерируется)
+├── llm_api_tests/         # Скрипты для тестирования LLM API
+│   ├── simple_query.py    # Тест простых запросов к API
+│   ├── math_reasoning_query.py # Тест запросов с математическими рассуждениями
+│   └── structured_output_query.py # Тест запросов со структурированным выводом
 ├── notebooks/             # Директория для Jupyter ноутбуков
+├── ollama_service/        # Сервис Ollama для работы с LLM
+│   ├── Dockerfile         # Dockerfile для сервиса Ollama
+│   └── init.sh            # Скрипт инициализации Ollama
 ├── pyproject.toml         # Файл конфигурации проекта и зависимостей (PEP 621)
+├── project/               # Директория с документацией по проекту
 ├── scripts/
 │   ├── download_files.py  # Скрипт для скачивания файлов с фильтрацией по расширению
-│   ├── generate_report.py # Скрипт для генерации отчета по скачанным файлам
+│   ├── generate_file_report.py # Скрипт для генерации отчета по скачанным файлам
 │   ├── parse_documents.py # Скрипт для парсинга скачанных документов
 │   ├── drop_databases.py  # Скрипт для удаления проектных БД
 │   └── restore_databases.py # Скрипт для восстановления БД из дампов
@@ -51,6 +63,12 @@
 │       ├── __init__.py
 │       ├── parsers/       # Модули для парсинга различных форматов файлов
 │       └── main.py        # Точка входа в приложение (пример)
+├── telegram_bot/          # Телеграм бот для взаимодействия с пользователем
+│   ├── Dockerfile         # Dockerfile для Telegram бота
+│   ├── bot.py             # Основной код Telegram бота
+│   ├── ollama_client.py   # Клиент для взаимодействия с Ollama API
+│   ├── start_bot.sh       # Скрипт запуска бота
+│   └── wait_for_model.sh  # Скрипт ожидания загрузки модели
 └── tests/                 # Директория для тестов
     ├── __init__.py
     ├── constants.py
@@ -148,7 +166,7 @@
     POSTGRES_PORT=5433 # Порт на хосте для доступа к БД в контейнере (по умолчанию 5433)
 
     # URL для LLM API (используется ботом внутри Docker)
-    LLM_API_URL="http://llm_service:11434"
+    LLM_API_URL="http://ollama:11434"
     ```
     Замените `ВАШ_ТОКЕН_БОТА` на реальный токен.
 
@@ -169,16 +187,22 @@
     make docker-logs     # Показать логи всех сервисов (нажмите Ctrl+C для выхода)
     make docker-logs-bot # Показать логи только бота (нажмите Ctrl+C для выхода)
     make docker-logs-llm # Показать логи только LLM сервиса (нажмите Ctrl+C для выхода)
-    ```
-
-    Для просмотра логов с отслеживанием новых сообщений:
-    ```bash
     make docker-logs-bot-follow # Показать логи бота с постоянным отслеживанием (аналог -f)
     ```
 
-    Для просмотра истории запросов и ответов телеграм-бота непосредственно в контейнере:
+    Для просмотра логов непосредственно в контейнерах:
     ```bash
-    sudo docker compose exec telegram_bot cat /app/logs/bot.log
+    sudo docker compose exec telegram_bot cat /app/logs/bot.log  # Логи телеграм-бота
+    sudo docker compose exec ollama cat /app/logs/ollama.log  # Логи Ollama
+    ```
+
+    Все логи также доступны в директории `./logs` проекта:
+    ```bash
+    # Логи телеграм-бота
+    cat logs/bot.log
+    
+    # Логи Ollama
+    cat logs/ollama.log
     ```
 
 6.  **Остановка контейнеров:**
@@ -195,34 +219,28 @@
     *   Пользователь/Пароль/БД: из `.env` (или `user`/`password`/`chathrd_db` по умолчанию)
 
 8.  **Взаимодействие с Ollama:**
-    *   После запуска контейнеров Ollama будет доступна внутри Docker сети по адресу `http://llm_service:11434`.
-    *   Бот (`telegram_bot`) будет использовать этот адрес для отправки запросов к LLM, если переменная `LLM_API_URL` в `.env` установлена соответствующим образом (по умолчанию она установлена правильно).
-    *   Для скачивания моделей и взаимодействия с Ollama изнутри контейнера `llm_service`, можно использовать команду:
-      ```bash
-      sudo docker compose exec llm_service ollama pull <название_модели>
-      sudo docker compose exec llm_service ollama run <название_модели> "Ваш промпт"
-      ```
-    *   Для скачивания конкретной модели, используемой в проекте:
-      ```bash
-      sudo docker compose exec ollama ollama pull hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q4_K_M
-      ```
-    *   Для просмотра списка скачанных моделей:
-      ```bash
-      sudo docker compose exec ollama ollama list
-      ```
-    *   Для просмотра подробной информации о модели (включая количество слоев):
-      ```bash
-      sudo docker compose exec ollama ollama show <название_модели>
-      ```
-      Например:
-      ```bash
-      sudo docker compose exec ollama ollama show hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q8_0
-      ```
-    *   Для просмотра логов внутри контейнера:
-      ```bash
-      sudo docker compose exec ollama cat /var/log/ollama/ollama.log
-      ```
-    *   Если вы хотите иметь доступ к Ollama API с вашего хост-компьютера (например, для тестов через Postman или curl), раскомментируйте секцию `ports` для `llm_service` в `docker-compose.yml`.
+    *   После запуска контейнеров Ollama доступна внутри Docker сети по адресу `http://ollama:11434`.
+    *   Бот автоматически использует этот адрес (через переменную `LLM_API_URL` в `.env`).
+    
+    **Управление моделями:**
+    ```bash
+    # Скачать модель
+    sudo docker compose exec ollama ollama pull <название_модели>
+    
+    # Скачать рекомендуемую модель
+    sudo docker compose exec ollama ollama pull hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q4_K_M
+    
+    # Запустить модель напрямую (для тестирования)
+    sudo docker compose exec ollama ollama run <название_модели> "Ваш промпт"
+    
+    # Просмотреть список скачанных моделей
+    sudo docker compose exec ollama ollama list
+    
+    # Просмотреть детальную информацию о модели (количество слоев и др.)
+    sudo docker compose exec ollama ollama show <название_модели>
+    ```
+    
+    *   Если вы хотите иметь доступ к Ollama API с вашего хост-компьютера (для тестов через Postman или curl), раскомментируйте секцию `ports` для `ollama` в `docker-compose.yml`.
 
 ## Запуск и настройка Telegram-бота
 

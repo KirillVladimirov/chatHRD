@@ -1,8 +1,8 @@
-import requests
 import logging
-from typing import Optional
 import os
+from typing import Optional
 from dotenv import load_dotenv
+from openai import OpenAI
 
 load_dotenv()
 
@@ -13,41 +13,50 @@ class OllamaClient:
     def __init__(self, base_url: str = None):
         # Используем URL из переменной окружения или значение по умолчанию
         self.base_url = base_url or os.getenv("LLM_API_URL", "http://ollama:11434")
+        # OpenAI-совместимый URL (добавляем /v1 к базовому URL)
+        self.api_base = f"{self.base_url}/v1"
         # Используем имя модели из переменной окружения или значение по умолчанию
         self.model = os.getenv("MODEL_NAME", "hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q8_0")
         # Системный промпт для более контролируемых ответов
-        self.system_prompt = """Ты помощник в диалоге с пользователем. 
+        self.system_prompt = """Ты полезный ассистент. 
 Отвечай кратко и по существу на заданные вопросы.
+Отвечай только на текущий запрос пользователя.
 Если пользователь просто здоровается, ответь простым приветствием без дополнительной информации."""
-        logger.info(f"Инициализация OllamaClient с base_url: {self.base_url}, модель: {self.model}")
+        
+        # Инициализация клиента OpenAI
+        try:
+            self.client = OpenAI(
+                base_url=self.api_base,
+                api_key="ollama"  # API ключ не используется Ollama, но требуется библиотекой
+            )
+            logger.info(f"Инициализация OllamaClient с base_url: {self.api_base}, модель: {self.model}")
+        except Exception as e:
+            logger.error(f"Ошибка при инициализации клиента OpenAI: {e}")
+            self.client = None
 
     def generate_response(self, prompt: str) -> Optional[str]:
+        """Генерирует ответ на запрос пользователя с использованием OpenAI API."""
+        if not self.client:
+            logger.error("Клиент OpenAI не был инициализирован")
+            return None
+            
         try:
             logger.info(f"Отправка запроса к LLM с промптом: {prompt}...")
-            response = requests.post(
-                f"{self.base_url}/api/generate",
-                json={
-                    "model": self.model,
-                    "prompt": f"{self.system_prompt}\n\nПользователь: {prompt}\n\nАссистент:",
-                    "stream": False,
-                    "temperature": 0.7,  # добавляем параметр температуры для контроля креативности
-                    "max_tokens": 1000   # ограничиваем длину ответа
-                },
-                timeout=120
+            
+            completion = self.client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": self.system_prompt},
+                    {"role": "user", "content": prompt}
+                ],
+                max_tokens=1000,
+                temperature=0.7,
             )
-            response.raise_for_status()
-            result = response.json()["response"]
+            
+            result = completion.choices[0].message.content
             logger.info(f"Получен ответ от LLM: {result[:100]}...")
             return result
-        except requests.exceptions.ConnectionError as e:
-            logger.error(f"Ошибка соединения с LLM сервисом: {e}")
-            return None
-        except requests.exceptions.Timeout as e:
-            logger.error(f"Тайм-аут при ожидании ответа от LLM: {e}")
-            return None
-        except requests.exceptions.RequestException as e:
-            logger.error(f"Ошибка при выполнении запроса к LLM: {e}")
-            return None
+            
         except Exception as e:
-            logger.error(f"Непредвиденная ошибка при генерации ответа: {e}")
+            logger.error(f"Ошибка при генерации ответа: {e}")
             return None 

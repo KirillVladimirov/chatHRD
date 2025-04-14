@@ -25,6 +25,7 @@ services:
       - ./data/ollama:/root/.ollama
       - ./ollama_service:/app
       - ollama_status:/tmp/ollama_status # Общий том для хранения статус-файлов
+      - ./logs:/app/logs # Проброс директории логов из хоста в контейнер
     networks:
       - app_net
     environment:
@@ -77,6 +78,7 @@ services:
       dockerfile: telegram_bot/Dockerfile
     volumes:
       - ollama_status:/tmp/ollama_status # Общий том для хранения статус-файлов
+      - ./logs:/app/logs # Проброс директории логов из хоста в контейнер
     env_file:
       - .env # Передаем переменные из .env файла
     environment:
