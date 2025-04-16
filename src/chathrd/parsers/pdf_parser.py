@@ -1,9 +1,7 @@
 import fitz
 import pytesseract
 from PIL import Image
-import io
-from typing import List
-from .base import process_text_blocks, remove_duplicates, logger
+from chathrd.parsers.utils import process_text_blocks, remove_duplicates, logger
 
 def extract_text_with_ocr(page) -> str:
     """Извлекает текст из страницы PDF с помощью OCR."""

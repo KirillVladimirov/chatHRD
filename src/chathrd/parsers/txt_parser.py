@@ -1,4 +1,4 @@
-from .base import get_file_title, logger
+from chathrd.parsers.utils import get_file_title, logger
 
 def parse_txt(file_path: str) -> str:
     """Парсит TXT файл и возвращает его содержимое в markdown формате."""

@@ -1,5 +1,5 @@
 from docx import Document
-from .base import get_file_title, logger
+from chathrd.parsers.utils import get_file_title, logger
 
 def parse_docx(file_path: str) -> str:
     """Парсит DOCX файл и возвращает его содержимое в markdown формате."""
