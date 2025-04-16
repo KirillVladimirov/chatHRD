@@ -1,7 +1,7 @@
 services:
   db:
     container_name: chathrd_db
-    image: postgres:13-alpine
+    image: postgres:16.8-bullseye
     ports:
       - "${POSTGRES_PORT}:5432"
     environment:
@@ -79,14 +79,18 @@ services:
     volumes:
       - ollama_status:/tmp/ollama_status # Общий том для хранения статус-файлов
       - ./logs:/app/logs # Проброс директории логов из хоста в контейнер
+      - ./scripts:/app/scripts # Проброс скриптов
+      - ./data:/app/data # Проброс данных
+      - ./Makefile:/app/Makefile # Проброс Makefile
+      - ./.env:/app/.env # Проброс файла .env
     env_file:
       - .env # Передаем переменные из .env файла
     environment:
       - LLM_API_URL=${LLM_API_URL}
       - MODEL_NAME=${MODEL_NAME}
     depends_on:
-      model_initializer:
-        condition: service_completed_successfully # Ждем успешного завершения инициализации модели
+      ollama:
+        condition: service_healthy # Ждем, когда сервис Ollama будет доступен
     networks:
       - app_net
     restart: on-failure

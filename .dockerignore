@@ -1,0 +1,37 @@
+# Игнорируем директории с данными
+data/
+data/downloaded_files/
+data/ollama/
+data/raw/
+data/parsed_files/
+
+# Игнорируем системные директории и кэши
+.git/
+logs/
+.venv/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+**/*.pyd
+**/*.so
+**/*.swp
+**/.DS_Store
+.cursor/
+.idea/
+.vscode/
+.pytest_cache/
+.ruff_cache/
+
+# Игнорируем логи и временные файлы
+*.log
+logs/
+tmp/
+
+# Не игнорируем важные файлы для сборки
+!telegram_bot/
+!src/
+!scripts/
+!pyproject.toml
+!README.md
+!Makefile
+!.env 

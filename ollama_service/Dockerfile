@@ -1,8 +1,15 @@
 # Используем официальный образ Ollama как базовый
 FROM ollama/ollama:latest
 
-# Установка необходимых утилит
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+# Установка необходимых утилит с использованием нескольких репозиториев и таймаутов
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends apt-transport-https ca-certificates && \
+    echo 'Acquire::ForceIPv4 "true";' > /etc/apt/apt.conf.d/99force-ipv4 && \
+    echo 'Acquire::http::Timeout "60";' > /etc/apt/apt.conf.d/99timeout && \
+    echo 'APT::Install-Recommends "false";' > /etc/apt/apt.conf.d/99norecommends && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends curl && \
+    rm -rf /var/lib/apt/lists/*
 
 # Создаем директорию для логов
 RUN mkdir -p /app/logs
