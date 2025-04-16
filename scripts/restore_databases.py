@@ -61,14 +61,18 @@ def main():
     load_dotenv(dotenv_path=dotenv_path)
 
     # Считываем параметры из переменных окружения
-    pg_user = os.getenv("PG_USER")
-    pg_password = os.getenv("PG_PASSWORD")
-    pg_host = os.getenv("PG_HOST", "localhost")
-    pg_port = os.getenv("PG_PORT", "5432")
+    pg_user = os.getenv("POSTGRES_USER")
+    pg_password = os.getenv("POSTGRES_PASSWORD")
+    pg_host = os.getenv("PG_HOST", "db")
+    
+    # Внутри Docker сети всегда используем стандартный порт 5432
+    # Порт из переменной POSTGRES_PORT (5433) используется только для внешнего доступа
+    pg_port = "5432"  # Внутренний порт PostgreSQL в контейнере всегда 5432
+    
     pg_db_initial = os.getenv("PG_DB_INITIAL", "postgres")
 
     if not all([pg_user, pg_password]):
-        print("Ошибка: Переменные PG_USER и PG_PASSWORD должны быть установлены в .env файле.")
+        print("Ошибка: Переменные POSTGRES_USER и POSTGRES_PASSWORD должны быть установлены в .env файле.")
         return
 
     # Определяем путь к директории с дампами

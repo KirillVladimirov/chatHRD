@@ -1,10 +1,10 @@
 # ChatHRD
 
-Система для работы с HR документами.
+Система для работы с HR документами на базе Docker.
 
 ## Описание проекта
 
-**ChatHRD** — это прототип (MVP) поисковой системы на базе LLM, разрабатываемый для интеграции в систему кадрового электронного документооборота **VK HR Tek**.
+**ChatHRD** — это прототип (MVP) поисковой системы на базе LLM, разрабатываемый для интеграции в систему кадрового электронного документооборота **VK HR Tek**. Проект полностью работает в Docker-контейнерах.
 
 ## Задача проекта
 
@@ -21,7 +21,7 @@
 .
 ├── .env                   # Файл с переменными окружения (учетные данные БД и т.д.)
 ├── .gitignore             # Файл для исключения файлов из Git
-├── Makefile               # Файл с командами для управления проектом (установка, очистка, работа с БД)
+├── Makefile               # Файл с командами для управления проектом
 ├── README.md              # Этот файл
 ├── Modelfile              # Файл конфигурации для моделей Ollama
 ├── docker-compose.yml     # Конфигурация Docker для развертывания сервисов
@@ -43,40 +43,26 @@
 │   ├── ollama.log         # Лог работы Ollama сервиса
 │   └── file_report.md     # Отчет по типам скачанных файлов (генерируется)
 ├── llm_api_tests/         # Скрипты для тестирования LLM API
-│   ├── simple_query.py    # Тест простых запросов к API
-│   ├── math_reasoning_query.py # Тест запросов с математическими рассуждениями
-│   └── structured_output_query.py # Тест запросов со структурированным выводом
 ├── notebooks/             # Директория для Jupyter ноутбуков
 ├── ollama_service/        # Сервис Ollama для работы с LLM
-│   ├── Dockerfile         # Dockerfile для сервиса Ollama
-│   └── init.sh            # Скрипт инициализации Ollama
 ├── pyproject.toml         # Файл конфигурации проекта и зависимостей (PEP 621)
 ├── project/               # Директория с документацией по проекту
-├── scripts/
-│   ├── download_files.py  # Скрипт для скачивания файлов с фильтрацией по расширению
-│   ├── generate_file_report.py # Скрипт для генерации отчета по скачанным файлам
-│   ├── parse_documents.py # Скрипт для парсинга скачанных документов
-│   ├── drop_databases.py  # Скрипт для удаления проектных БД
-│   └── restore_databases.py # Скрипт для восстановления БД из дампов
-├── src/
-│   └── chathrd/           # Основной исходный код проекта
-│       ├── __init__.py
-│       ├── parsers/       # Модули для парсинга различных форматов файлов
-│       └── main.py        # Точка входа в приложение (пример)
-├── telegram_bot/          # Телеграм бот для взаимодействия с пользователем
-│   ├── Dockerfile         # Dockerfile для Telegram бота
-│   ├── bot.py             # Основной код Telegram бота
-│   ├── ollama_client.py   # Клиент для взаимодействия с Ollama API
-│   ├── start_bot.sh       # Скрипт запуска бота
-│   └── wait_for_model.sh  # Скрипт ожидания загрузки модели
-└── tests/                 # Директория для тестов
-    ├── __init__.py
-    ├── constants.py
-    ├── test_parsers.py
-    └── utils.py
+├── scripts/               # Скрипты для работы с данными и БД
+├── src/                   # Основной исходный код проекта
+└── telegram_bot/          # Телеграм бот для взаимодействия с пользователем
 ```
 
 ## Развертывание проекта
+
+### Требования
+
+Для запуска проекта необходимы:
+
+1. Docker и Docker Compose
+2. Минимум 8 ГБ оперативной памяти (рекомендуется 16+ ГБ)
+3. Около 25 ГБ свободного места на диске для файлов и моделей
+
+### Шаги развертывания
 
 1.  **Клонировать репозиторий:**
     ```bash
@@ -84,235 +70,222 @@
     cd chathrd
     ```
 
-2.  **Создать и активировать виртуальное окружение:**
-    ```bash
-    python -m venv .venv
-    source .venv/bin/activate # для Linux/macOS
-    # .venv\Scripts\activate # для Windows
-    ```
-
-3.  **Настроить подключение к БД:**
-    *   Скопируйте файл `.env.example` (если он есть) в `.env` или создайте `.env` вручную.
-    *   Заполните файл `.env` учетными данными для вашего сервера PostgreSQL (версии 17+):
-        ```dotenv
-        PG_USER=ваш_пользователь
-        PG_PASSWORD=ваш_пароль
-        PG_HOST=localhost
-        PG_PORT=5432
-        PG_DB_INITIAL=postgres
-        # DOWNLOAD_WORKERS=10 # Опционально: количество потоков для скачивания
-        ```
-
-4.  **Установить системные зависимости:**
-    *   Для работы парсеров (включая OCR для PDF) требуются `tesseract`:
-        ```bash
-        sudo apt-get update
-        sudo apt-get install -y tesseract-ocr tesseract-ocr-rus # Для русского и английского языков
-        ```
-    *   Для генерации визуальных схем БД (опционально):
-        ```bash
-        sudo apt-get install -y graphviz
-        ```
-
-5.  **Установить Python зависимости:**
-    Все зависимости проекта управляются через `pyproject.toml`.
-    ```bash
-    make install
-    # или напрямую: pip install -e .[dev,notebooks] # Установить основные, для разработки и ноутбуков
-    ```
-
-6.  **Подготовить данные:**
-    *   Убедитесь, что сервер PostgreSQL (версии 17+) запущен.
-    *   Поместите файлы дампов (`cms.dump`, `lists.dump`, `filestorage.dump`) в директорию `data/raw/`.
-
-7.  **Восстановить базы данных:**
-    ```bash
-    make restore-db
-    ```
-    Эта команда создаст базы данных `cms`, `lists`, `filestorage` и загрузит в них данные из дампов.
-
-8.  **Скачать файлы:**
-    ```bash
-    make download-files
-    ```
-    Эта команда запустит многопоточное скачивание файлов из хранилища в директорию `data/downloaded_files/`. **Скачиваются только файлы с разрешенными расширениями** (см. `scripts/download_files.py`): `.pdf`, `.csv`, `.json`, `.doc`, `.docx`, `.epub`, `.txt`, `.xls`, `.xlsx`, `.yml`.
-    По умолчанию используется 10 потоков (можно изменить переменной `DOWNLOAD_WORKERS` в `.env`).
-    
-    ```bash
-    du -sh data/downloaded_files
-    ```
-    Эта команда позволяет измерить размер скачанных данных.
-
-После выполнения этих шагов проект будет готов к работе.
-
-## Развертывание с Docker
-
-Для запуска проекта с использованием Docker и Docker Compose:
-
-1.  **Установите Docker и Docker Compose:**
-    Следуйте [официальной инструкции](https://docs.docker.com/engine/install/) для вашей ОС.
-    Убедитесь, что ваш пользователь добавлен в группу `docker` (может потребоваться перезапуск терминала или системы).
-
 2.  **Настройте файл `.env`:**
-    Скопируйте `.env.example` в `.env` (если не сделали этого ранее) в корне проекта.
+    Скопируйте `.env.example` в `.env` в корне проекта.
     Убедитесь, что файл `.env` содержит как минимум:
     ```dotenv
     TELEGRAM_BOT_TOKEN="ВАШ_ТОКЕН_БОТА"
 
-    # Параметры для PostgreSQL в Docker (можно оставить по умолчанию)
+    # Параметры для PostgreSQL в Docker
     POSTGRES_USER=user
     POSTGRES_PASSWORD=password
     POSTGRES_DB=chathrd_db
-    POSTGRES_PORT=5433 # Порт на хосте для доступа к БД в контейнере (по умолчанию 5433)
+    POSTGRES_PORT=5433 # Порт на хосте для доступа к БД в контейнере
 
     # URL для LLM API (используется ботом внутри Docker)
     LLM_API_URL="http://ollama:11434"
+    
+    # Настройки для Ollama
+    MODEL_NAME="hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q4_K_M"
+    OLLAMA_GPU_LAYERS="26" # Количество слоев модели на GPU (если есть)
     ```
     Замените `ВАШ_ТОКЕН_БОТА` на реальный токен.
 
-3.  **Соберите образы и запустите контейнеры:**
-    В корневой директории проекта выполните:
+3.  **Подготовка данных:**
+    Поместите файлы дампов баз данных (`cms.dump`, `lists.dump`, `filestorage.dump`) в директорию `data/raw/`.
+
+4.  **Запуск проекта:**
+    ```bash
+    sudo docker compose up -d
+    ```
+    
+    Альтернативно:
     ```bash
     make docker-up
     ```
 
-4.  **Проверка статуса:**
+5.  **Восстановление баз данных:**
+    ```bash
+    sudo docker compose exec telegram_bot make restore-db
+    ```
+
+6.  **Скачивание файлов:**
+    ```bash
+    sudo docker compose exec telegram_bot make download-files
+    ```
+    Эта команда запустит многопоточное скачивание файлов из хранилища в директорию `data/downloaded_files/`.
+
+7.  **Проверка статуса:**
+    ```bash
+    sudo docker compose ps
+    ```
+    
+    Альтернативно:
     ```bash
     make docker-ps
     ```
-    Убедитесь, что сервисы `db`, `llm_service` и `telegram_bot` имеют статус `running`.
-
-5.  **Просмотр логов:**
-    ```bash
-    make docker-logs     # Показать логи всех сервисов (нажмите Ctrl+C для выхода)
-    make docker-logs-bot # Показать логи только бота (нажмите Ctrl+C для выхода)
-    make docker-logs-llm # Показать логи только LLM сервиса (нажмите Ctrl+C для выхода)
-    make docker-logs-bot-follow # Показать логи бота с постоянным отслеживанием (аналог -f)
-    ```
-
-    Для просмотра логов непосредственно в контейнерах:
-    ```bash
-    sudo docker compose exec telegram_bot cat /app/logs/bot.log  # Логи телеграм-бота
-    sudo docker compose exec ollama cat /app/logs/ollama.log  # Логи Ollama
-    ```
-
-    Все логи также доступны в директории `./logs` проекта:
-    ```bash
-    # Логи телеграм-бота
-    cat logs/bot.log
     
-    # Логи Ollama
-    cat logs/ollama.log
-    ```
+    Убедитесь, что сервисы `db`, `ollama`, `model_initializer` и `telegram_bot` имеют статус `running` или `completed` (для `model_initializer`).
 
-6.  **Остановка контейнеров:**
-    ```bash
-    make docker-down   # Остановить и удалить контейнеры (тома сохраняются)
-    make docker-down-v # Остановить, удалить контейнеры и том БД
-    make docker-stop   # Просто остановить контейнеры (без удаления)
-    ```
+## Работа с проектом
 
-7.  **Доступ к БД из хоста:**
-    Если вы оставили проброс порта в `docker-compose.yml` (по умолчанию на порт хоста `5433`), вы можете подключиться к базе данных в контейнере с помощью:
-    *   Хост: `localhost`
-    *   Порт: `5433` (или значение `POSTGRES_PORT` из `.env`)
-    *   Пользователь/Пароль/БД: из `.env` (или `user`/`password`/`chathrd_db` по умолчанию)
+### Просмотр логов
 
-8.  **Взаимодействие с Ollama:**
-    *   После запуска контейнеров Ollama доступна внутри Docker сети по адресу `http://ollama:11434`.
-    *   Бот автоматически использует этот адрес (через переменную `LLM_API_URL` в `.env`).
-    
-    **Управление моделями:**
-    ```bash
-    # Скачать модель
-    sudo docker compose exec ollama ollama pull <название_модели>
-    
-    # Скачать рекомендуемую модель
-    sudo docker compose exec ollama ollama pull hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q4_K_M
-    
-    # Запустить модель напрямую (для тестирования)
-    sudo docker compose exec ollama ollama run <название_модели> "Ваш промпт"
-    
-    # Просмотреть список скачанных моделей
-    sudo docker compose exec ollama ollama list
-    
-    # Просмотреть детальную информацию о модели (количество слоев и др.)
-    sudo docker compose exec ollama ollama show <название_модели>
-    ```
-    
-    *   Если вы хотите иметь доступ к Ollama API с вашего хост-компьютера (для тестов через Postman или curl), раскомментируйте секцию `ports` для `ollama` в `docker-compose.yml`.
-
-## Запуск и настройка Telegram-бота
-
-### Запуск локально (без Docker)
-
-1.  Убедитесь, что выполнены шаги из раздела "Развертывание проекта" (виртуальное окружение активировано, зависимости установлены через `make install`).
-2.  Убедитесь, что в файле `.env` в корне проекта указан `TELEGRAM_BOT_TOKEN`.
-3.  Запустите бота командой:
-    ```bash
-    make run-telegram-bot
-    ```
-    Или напрямую:
-    ```bash
-    python telegram_bot/bot.py
-    ```
-
-### Запуск в Docker
-
-Бот автоматически запускается как сервис `telegram_bot` при выполнении команды `docker compose up`. Его не нужно запускать отдельно.
-
-### Настройка
-
-Основная настройка бота производится через переменные окружения в файле `.env` в корне проекта:
-
-*   `TELEGRAM_BOT_TOKEN` (обязательно): Токен, полученный от BotFather.
-*   `DATABASE_URL` (для Docker настраивается автоматически): Строка подключения к базе данных. При локальном запуске бот может попытаться использовать эту переменную, если она задана.
-*   `LLM_API_URL`: URL для подключения к LLM-сервису. При запуске в Docker должен указывать на `http://llm_service:11434` (значение по умолчанию в `.env.example`).
-
-## Документация
-
-Текстовые схемы баз данных в формате Mermaid ERD можно сгенерировать, запустив соответствующие ячейки в ноутбуке `notebooks/visualize_db_relations.ipynb`. Результаты сохраняются в директории `docs/` (`db_schema_*.md`) и могут быть добавлены в систему контроля версий. Эти файлы можно просматривать на платформах, поддерживающих Mermaid (например, GitHub).
-
-Визуальные схемы (PNG) генерируются в `logs/db_diagrams/` при запуске ноутбука `notebooks/visualize_db_relations.ipynb` (требуется Graphviz).
-
-## Дополнительные команды Makefile
-
-*   `make clean`: Удалить временные файлы и кэш (`__pycache__`, `.pytest_cache` и т.д.).
-*   `make format`: Отформатировать код с помощью Ruff.
-*   `make lint`: Проверить код линтерами (Ruff, Mypy).
-*   `make test`: Запустить тесты с помощью Pytest и сгенерировать отчет о покрытии.
-*   `make install`: Установить проект и все зависимости (`.[dev,notebooks]`).
-*   `make restore-db`: Восстановить базы данных из дампов (`data/raw/`).
-*   `make drop-db`: **(Внимание!)** Удалить базы данных `cms`, `lists`, `filestorage`. Запрашивает подтверждение.
-*   `make download-files`: Запустить **многопоточное** скачивание файлов из хранилища (только разрешенные расширения).
-*   `make parse-docs`: Запустить парсинг скачанных документов в формат Markdown.
-*   `make generate-report`: Сгенерировать отчет по типам скачанных файлов в `logs/file_report.md`.
-*   `make check-system-deps`: Проверить наличие необходимых системных зависимостей (tesseract, graphviz).
-*   `make run-telegram-bot`: Запустить Telegram бота локально (без Docker).
-*   `make docker-up`: Собрать образы и запустить контейнеры Docker в фоновом режиме.
-*   `make docker-down`: Остановить и удалить контейнеры Docker (тома сохраняются).
-*   `make docker-down-v`: Остановить и удалить контейнеры и тома Docker.
-*   `make docker-ps`: Показать статус контейнеров Docker.
-*   `make docker-logs`: Показать логи всех контейнеров Docker (-f для слежения).
-*   `make docker-logs-bot`: Показать логи контейнера telegram_bot (-f для слежения).
-*   `make docker-logs-llm`: Показать логи контейнера llm_service (-f для слежения).
-*   `make docker-stop`: Остановить запущенные контейнеры Docker (без удаления).
-*   `make help`: Показать справку по всем доступным командам Makefile.
-
-## Парсинг документов
-
-Парсинг преобразует скачанные документы в единый формат Markdown для дальнейшей обработки и индексации.
-
--   **Расположение результатов:** `data/parsed_files/`
--   **Скрипт парсинга:** `scripts/parse_documents.py`
--   **Модули парсеров:** `src/chathrd/parsers/`
-
-### Команда для запуска парсинга:
 ```bash
-make parse-docs
+# Логи всех сервисов
+sudo docker compose logs
+
+# Логи телеграм-бота
+sudo docker compose logs telegram_bot
+
+# Логи Ollama
+sudo docker compose logs ollama
+
+# Постоянное отслеживание логов бота
+sudo docker compose logs -f telegram_bot
 ```
 
-### Поддерживаемые форматы для парсинга:
+Альтернативно с использованием `make`:
+```bash
+# Логи всех сервисов
+make docker-logs
+
+# Логи телеграм-бота
+make docker-logs-bot
+
+# Логи Ollama
+make docker-logs-ollama
+
+# Постоянное отслеживание логов бота
+make docker-logs-bot-follow
+```
+
+### Парсинг документов
+
+Для преобразования скачанных документов в формат Markdown:
+
+```bash
+sudo docker compose exec telegram_bot make parse-docs
+```
+
+Результаты будут сохранены в `data/parsed_files/`.
+
+### Остановка проекта
+
+```bash
+# Остановить контейнеры (тома сохраняются)
+sudo docker compose down
+
+# Остановить контейнеры и удалить тома
+sudo docker compose down -v
+
+# Приостановить работу контейнеров без их удаления
+sudo docker compose stop
+```
+
+Альтернативно с использованием `make`:
+```bash
+# Остановить контейнеры (тома сохраняются)
+make docker-down
+
+# Остановить контейнеры и удалить тома
+make docker-down-volumes
+
+# Приостановить работу контейнеров без их удаления
+make docker-stop
+```
+
+## Взаимодействие с LLM
+
+Управление моделями Ollama:
+
+```bash
+# Скачать дополнительную модель
+sudo docker compose exec ollama ollama pull <название_модели>
+
+# Скачать рекомендуемую модель
+sudo docker compose exec ollama ollama pull hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q4_K_M
+
+# Тестирование модели напрямую
+sudo docker compose exec ollama ollama run <название_модели> "Ваш промпт"
+
+# Просмотр списка скачанных моделей
+sudo docker compose exec ollama ollama list
+
+# Просмотр информации о модели
+sudo docker compose exec ollama ollama show <название_модели>
+```
+
+## Управление данными
+
+### Доступ к базе данных
+
+Подключение к PostgreSQL из контейнера:
+
+```bash
+sudo docker compose exec telegram_bot psql -U $POSTGRES_USER -d cms
+sudo docker compose exec telegram_bot psql -U $POSTGRES_USER -d lists
+sudo docker compose exec telegram_bot psql -U $POSTGRES_USER -d filestorage
+```
+
+Для просмотра таблиц в базах данных:
+
+```bash
+# Просмотр списка таблиц в базе данных cms
+sudo docker compose exec telegram_bot psql -U $POSTGRES_USER -d cms -c '\dt'
+
+# Просмотр структуры конкретной таблицы
+sudo docker compose exec telegram_bot psql -U $POSTGRES_USER -d cms -c '\d+ table_name'
+
+# Просмотр содержимого таблицы
+sudo docker compose exec telegram_bot psql -U $POSTGRES_USER -d cms -c 'SELECT * FROM table_name LIMIT 10;'
+```
+
+### Управление базами данных
+
+```bash
+# Восстановление баз данных из дампов
+sudo docker compose exec telegram_bot make restore-db
+
+# Удаление баз данных (требуется подтверждение)
+sudo docker compose exec telegram_bot make drop-db
+```
+
+### Работа с файлами
+
+```bash
+# Скачивание файлов из хранилища
+sudo docker compose exec telegram_bot make download-files
+
+# Генерация отчета по типам файлов
+sudo docker compose exec telegram_bot make generate-report
+
+# Проверка размера скачанных данных
+sudo docker compose exec telegram_bot du -sh /app/data/downloaded_files
+```
+
+## Дополнительные команды
+
+Все команды запускаются внутри контейнера `telegram_bot`:
+
+```bash
+# Запуск тестов
+sudo docker compose exec telegram_bot make test
+
+# Форматирование кода
+sudo docker compose exec telegram_bot make format
+
+# Проверка линтерами
+sudo docker compose exec telegram_bot make lint
+
+# Очистка временных файлов
+sudo docker compose exec telegram_bot make clean
+
+# Справка по доступным командам
+sudo docker compose exec telegram_bot make help
+```
+
+## Поддерживаемые форматы для парсинга
 
 | Формат | Расширение | Поддержка OCR | Библиотека (основная) | Примечания                                 |
 | :----- | :--------- | :------------ | :-------------------- | :----------------------------------------- |
@@ -323,20 +296,3 @@ make parse-docs
 | Text   | `.txt`     | Нет           | (встроенные)          | Читает как обычный текст                     |
 
 **Примечание:** Файлы форматов `.doc`, `.json`, `.epub`, `.xls`, `.yml` скачиваются, но **в данный момент не парсятся** (для них нет реализованных парсеров в `src/chathrd/parsers/`). Парсер для них вернет `None`, и соответствующий `.md` файл не будет создан.
-
-### Системные зависимости для парсинга:
-
--   `tesseract-ocr` и `tesseract-ocr-rus` (для OCR в PDF)
-
-Установка на Ubuntu/Debian:
-```bash
-sudo apt-get install tesseract-ocr tesseract-ocr-rus
-```
-
-## Использование
-
-После установки зависимостей, восстановления БД и скачивания файлов, можно запустить парсинг:
-```bash
-make parse-docs
-```
-Результаты будут сохранены в `data/parsed_files/`.
