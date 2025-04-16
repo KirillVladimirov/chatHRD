@@ -13,81 +13,105 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def parse_files_from_list(files: list, output_dir: str):
+def get_files_to_process(input_dir: str, output_dir: str) -> list:
     """
-    Парсит файлы из списка и сохраняет результаты в markdown формате.
+    Получает список файлов, которые требуют обработки.
     
     Args:
-        files: Список файлов для парсинга
+        input_dir: Директория с исходными файлами
+        output_dir: Директория с уже обработанными файлами
+    
+    Returns:
+        list: Список путей к файлам, которые нужно обработать
+    """
+    # Получаем все файлы из директории с исходными документами
+    input_path = Path(input_dir)
+    if not input_path.exists():
+        logger.error(f"Директория {input_dir} не существует")
+        return []
+    
+    # Получаем список всех файлов в директории
+    all_files = [f for f in input_path.glob('*') if f.is_file()]
+    logger.info(f"Всего найдено {len(all_files)} файлов в {input_dir}")
+    
+    # Получаем список уже обработанных файлов
+    output_path = Path(output_dir)
+    processed_files = set()
+    if output_path.exists():
+        # Извлекаем только названия файлов без расширения .md
+        processed_files = {f.stem for f in output_path.glob('*.md')}
+        logger.info(f"Найдено {len(processed_files)} уже обработанных файлов в {output_dir}")
+    
+    # Фильтруем список, исключая уже обработанные файлы
+    files_to_process = [f for f in all_files if f.stem not in processed_files]
+    
+    # Сортируем файлы по размеру (от меньшего к большему)
+    files_to_process.sort(key=lambda f: f.stat().st_size)
+    
+    logger.info(f"Требуют обработки {len(files_to_process)} файлов (отсортированы от меньшего к большему)")
+    
+    return files_to_process
+
+def process_files(files: list, output_dir: str):
+    """
+    Обрабатывает файлы и сохраняет результаты в markdown формате.
+    
+    Args:
+        files: Список объектов Path для обработки
         output_dir: Директория для сохранения результатов
     """
     # Создаем директорию для результатов, если она не существует
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
-    # Парсим каждый файл
-    for file_name in files:
-        file_path = Path("data/downloaded_files") / file_name
-        if not file_path.exists():
-            logger.warning(f"Файл не найден: {file_path}")
-            continue
-            
+    # Счетчики для статистики
+    successful = 0
+    failed = 0
+    skipped = 0
+    total = len(files)
+    
+    # Обрабатываем каждый файл
+    for idx, file_path in enumerate(files, 1):
+        # Логируем прогресс с информацией о размере файла
+        file_size_mb = file_path.stat().st_size / (1024 * 1024)
+        logger.info(f"Обработка файла [{idx}/{total}]: {file_path} ({file_size_mb:.2f} МБ)")
+        
         try:
             # Парсим файл
             content = parse_file(str(file_path))
             
+            # Если содержимое None, значит файл не может быть обработан поддерживаемым парсером
+            if content is None:
+                logger.warning(f"[{idx}/{total}] Пропущен неподдерживаемый формат: {file_path}")
+                skipped += 1
+                continue
+                
             # Сохраняем результат
             output_file = output_path / f"{file_path.stem}.md"
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write(content)
                 
-            logger.info(f"Успешно обработан файл: {file_path}")
+            logger.info(f"[{idx}/{total}] Успешно обработан файл: {file_path}")
+            successful += 1
+            
         except Exception as e:
-            logger.error(f"Ошибка при обработке файла {file_path}: {e}")
+            logger.error(f"[{idx}/{total}] Ошибка при обработке файла {file_path}: {e}")
+            failed += 1
+    
+    # Выводим итоговую статистику
+    logger.info(f"Обработка завершена. Успешно: {successful}, С ошибками: {failed}, Пропущено: {skipped}, Всего: {total}")
 
 if __name__ == "__main__":
-    # Список файлов для парсинга
-    files = [
-        # PDF файлы - документация и инструкции
-        "zid_50_cat.pdf",
-        "Конспект с таймкодами. Знакомство с функциями и массивами.pdf",
-        "VK_HR_Tek_-_Описание_API_Документация_по_API_07.03.2024.pdf",
-        "Чек-лист_бадди_для_новых_сотрудников_VK_Tech.pdf",
-        "Легенда_к_макету_стартовой_страницы_03-06-2024.pdf",
-        "Руководство по использованию Vaultwarden - InfoSec - Confluence.pdf",
-        # PDF файлы - учебники и книги
-        "Фролов_К_В_Горные_машины_МЭ,_том_IV_24_2010.pdf",
-        "Фролов_К_В_Двигатели_внутреннего_сгорания_МЭ,_том_IV_14_2013.pdf",
-        "Фролов_К_В_Авиационные_двигатели_МЭ,_том_IV_21,_книга_3_2010.pdf",
-        "Фролов_К_В_Динамика_и_прочность_машин_МЭ,_том_I_3,_книга_1_1994.pdf",
-        "Ольга_Назина_Что_такое_тестирование.pdf",
-        "Software_Testing_-_Base_Course_Svyatoslav_Kulikov_-_3rd_edition_-_RU_1.pdf",
-        # PDF файлы - энциклопедии
-        "05_Великие_музеи_мира_Метрополитен_2011.pdf",
-        "06_Великие_музеи_мира_Эрмитаж_Часть_1_2011.pdf",
-        "04_Великие_музеи_мира_Египетский_музей_2011.pdf",
-        # DOCX файлы - инструкции и документация
-        "Инструкция работника для подачи заявления на социальные льготы.docx",
-        "Скриншоты текущего Sap_ модуль компетенций и СБГ213412412412412412 цаываывавыаыа.docx",
-        "Черновик.docx",
-        # XLSX файлы - таблицы с данными
-        "employees.xlsx",
-        "ideas_admins_list.xlsx",
-        "events_admins_list.xlsx",
-        "top.xlsx",
-        "authors.xlsx",
-        "Шаблон_загрузки_подразделений.xlsx",
-        "Чек_лист_проверок__Редактирование_разрешений_сервиса_Списки.xlsx",
-        # XLSX файлы - тестовые данные
-        "MOCK_DATA.xlsx",
-        "MOCK_DATA-2.xlsx",
-        "MOCK_DATA-3.xlsx",
-        # XLSX файлы - шаблоны
-        "Экспорт_участников_регистрации.xlsx",
-        "Шаблон загрузки организации новый.xlsx",
-    ]
-    
-    # Директория для результатов
+    # Директории для входных и выходных файлов
+    input_dir = "data/downloaded_files"
     output_dir = "data/parsed_files"
     
-    parse_files_from_list(files, output_dir) 
+    # Получаем список файлов для обработки
+    files_to_process = get_files_to_process(input_dir, output_dir)
+    
+    # Если есть файлы для обработки, обрабатываем их
+    if files_to_process:
+        logger.info(f"Начинаем обработку {len(files_to_process)} файлов...")
+        process_files(files_to_process, output_dir)
+    else:
+        logger.info("Нет новых файлов для обработки.") 
