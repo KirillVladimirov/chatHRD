@@ -1,6 +1,6 @@
 # ChatHRD
 
-Система для работы с HR документами на базе Docker.
+Система интеллектуального поиска по HR документам на базе Docker.
 
 ## Описание проекта
 
@@ -17,39 +17,37 @@
 
 ## Структура проекта
 
+Проект имеет следующую структуру:
+
 ```
-.
-├── .env                   # Файл с переменными окружения (учетные данные БД и т.д.)
-├── .gitignore             # Файл для исключения файлов из Git
-├── Makefile               # Файл с командами для управления проектом
-├── README.md              # Этот файл
-├── Modelfile              # Файл конфигурации для моделей Ollama
-├── docker-compose.yml     # Конфигурация Docker для развертывания сервисов
-├── data/
-│   ├── downloaded_files/  # Скачанные файлы с разрешенными расширениями
-│   ├── parsed_files/      # Документы, преобразованные в Markdown
-│   └── raw/               # Директория для исходных данных (дампы БД)
-├── docs/
-│   ├── data_for_task.md   # Описание данных для задачи
-│   ├── specification.md   # Техническое задание
-│   ├── db_schema_cms.md   # Mermaid-схема БД cms (генерируется)
-│   ├── db_schema_lists.md # Mermaid-схема БД lists (генерируется)
-│   └── db_schema_filestorage.md # Mermaid-схема БД filestorage (генерируется)
-├── logs/
-│   ├── db_diagrams/       # Визуальные схемы БД (PNG, генерируются)
-│   ├── download_errors.log # Лог ошибок скачивания файлов
-│   ├── download_stats.log  # Лог статистики скачивания файлов
-│   ├── bot.log            # Лог работы Telegram бота
-│   ├── ollama.log         # Лог работы Ollama сервиса
-│   └── file_report.md     # Отчет по типам скачанных файлов (генерируется)
-├── llm_api_tests/         # Скрипты для тестирования LLM API
-├── notebooks/             # Директория для Jupyter ноутбуков
-├── ollama_service/        # Сервис Ollama для работы с LLM
-├── pyproject.toml         # Файл конфигурации проекта и зависимостей (PEP 621)
-├── project/               # Директория с документацией по проекту
-├── scripts/               # Скрипты для работы с данными и БД
-├── src/                   # Основной исходный код проекта
-└── telegram_bot/          # Телеграм бот для взаимодействия с пользователем
+/
+├── src/                       # Исходный код пакета
+│   └── chathrd/               # Основной пакет
+│       ├── components/        # Компоненты пайплайнов
+│       │   ├── converters/    # Конвертеры документов
+│       │   ├── processors/    # Обработчики документов
+│       │   ├── retrievers/    # Компоненты для поиска
+│       │   ├── classifiers/   # Классификаторы запросов
+│       │   ├── selectors/     # Селекторы ответов
+│       │   └── generators/    # Компоненты для генерации ответов
+│       ├── pipelines/         # Готовые пайплайны
+│       │   ├── indexing.py    # Пайплайн индексации
+│       │   └── querying.py    # Пайплайн для запросов
+│       ├── utils/             # Вспомогательные функции
+│       ├── cli/               # Интерфейс командной строки
+│       └── config/            # Настройки проекта
+├── telegram_bot/              # Телеграм бот
+│   ├── bot.py                 # Основной файл бота
+│   ├── start_bot.sh           # Скрипт запуска бота
+│   ├── wait_for_model.sh      # Скрипт ожидания загрузки модели
+│   └── Dockerfile             # Файл для сборки контейнера бота
+├── scripts/                   # Скрипты для работы с данными
+├── notebooks/                 # Jupyter ноутбуки для экспериментов
+└── data/                      # Данные проекта
+    ├── raw/                   # Сырые данные (дампы баз данных)
+    ├── downloaded_files/      # Скачанные файлы
+    ├── chroma_index/          # Индекс Chroma
+    └── bm25.pkl               # Индекс BM25
 ```
 
 ## Развертывание проекта
@@ -160,15 +158,68 @@ make docker-logs-ollama
 make docker-logs-bot-follow
 ```
 
-### Парсинг документов
+### Индексация документов
 
-Для преобразования скачанных документов в формат Markdown:
+Для индексации документов и создания базы знаний:
 
 ```bash
-sudo docker compose exec telegram_bot make parse-docs
+# Создание индекса Chroma и BM25 для скачанных документов в Docker
+sudo docker compose exec telegram_bot chathrd-index --help
+
+# Локальная установка (после установки пакета)
+chathrd-index --help
 ```
 
-Результаты будут сохранены в `data/parsed_files/`.
+Примеры использования:
+```bash
+# Индексировать все файлы из стандартной директории
+sudo docker compose exec telegram_bot chathrd-index
+
+# Индексировать конкретные файлы
+sudo docker compose exec telegram_bot chathrd-index /path/to/file1.pdf /path/to/file2.docx
+
+# Указать другие директории
+sudo docker compose exec telegram_bot chathrd-index --data-dir /custom/data --index-dir /custom/index
+```
+
+Основные опции:
+- `путь_к_файлам` - пути к файлам для индексации (если не указано, используются все файлы из data-dir)
+- `--data-dir` - директория с файлами (по умолчанию: ../data/downloaded_files)
+- `--index-dir` - директория для сохранения индекса (по умолчанию: ../data/chroma_index)
+- `--bm25-path` - путь для сохранения BM25 индекса (по умолчанию: ../data/bm25.pkl)
+- `--log-level` - уровень логирования (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+
+### Поиск информации через командную строку
+
+Для выполнения запросов к индексированным документам:
+
+```bash
+# Поиск информации в индексе через Docker
+sudo docker compose exec telegram_bot chathrd-query --help
+
+# Локальная установка (после установки пакета)
+chathrd-query --help
+```
+
+Примеры использования:
+```bash
+# Простой запрос
+sudo docker compose exec telegram_bot chathrd-query "Как оформить отпуск?"
+
+# Запрос с указанием модели и API
+sudo docker compose exec telegram_bot chathrd-query "Порядок оформления больничного" --model-name "другая_модель" --api-url "http://custom-api/v1"
+
+# Указание нестандартных путей к индексам
+sudo docker compose exec telegram_bot chathrd-query "Процесс увольнения" --index-dir /path/to/index --bm25-path /path/to/bm25.pkl
+```
+
+Основные опции:
+- `query` - текст запроса для поиска информации
+- `--model-name` - имя модели LLM для генерации ответов (по умолчанию из settings/переменных окружения)
+- `--api-url` - URL для API LLM (по умолчанию из settings/переменных окружения)
+- `--index-dir` - директория с индексом Chroma (по умолчанию: ../data/chroma_index)
+- `--bm25-path` - путь к индексу BM25 (по умолчанию: ../data/bm25.pkl)
+- `--log-level` - уровень логирования (DEBUG, INFO, WARNING, ERROR, CRITICAL)
 
 ### Остановка проекта
 
@@ -194,6 +245,31 @@ make docker-down-volumes
 # Приостановить работу контейнеров без их удаления
 make docker-stop
 ```
+
+## Взаимодействие с Telegram ботом
+
+Бот автоматически запускается при старте контейнера `telegram_bot`. Для общения с ботом найдите его в Telegram по имени, которое вы указали при создании бота через BotFather.
+
+### Основные команды бота:
+- `/start` - Начать общение с ботом
+- `/help` - Показать справку
+- `/search <запрос>` - Поиск по базе знаний (альтернатива прямому вводу текста)
+- `/feedback <текст>` - Отправить отзыв о работе бота
+
+### Управление ботом:
+```bash
+# Перезапуск бота
+sudo docker compose restart telegram_bot
+
+# Просмотр логов бота
+sudo docker compose logs -f telegram_bot
+```
+
+### Принцип работы с ботом:
+1. Отправьте боту сообщение с вашим вопросом
+2. Бот проведет поиск по базе знаний
+3. Бот вернет ответ, сгенерированный на основе найденных документов
+4. Все источники информации будут указаны в ответе
 
 ## Взаимодействие с LLM
 
@@ -269,9 +345,6 @@ sudo docker compose exec telegram_bot du -sh /app/data/downloaded_files
 Все команды запускаются внутри контейнера `telegram_bot`:
 
 ```bash
-# Запуск тестов
-sudo docker compose exec telegram_bot make test
-
 # Форматирование кода
 sudo docker compose exec telegram_bot make format
 
@@ -285,14 +358,70 @@ sudo docker compose exec telegram_bot make clean
 sudo docker compose exec telegram_bot make help
 ```
 
-## Поддерживаемые форматы для парсинга
+## Поддерживаемые форматы для индексации
 
-| Формат | Расширение | Поддержка OCR | Библиотека (основная) | Примечания                                 |
-| :----- | :--------- | :------------ | :-------------------- | :----------------------------------------- |
-| PDF    | `.pdf`     | Да            | `PyMuPDF` + `Pytesseract` | Извлекает текст; использует OCR для изображений |
-| DOCX   | `.docx`    | Нет           | `python-docx`         | Извлекает текст и таблицы                   |
-| XLSX   | `.xlsx`    | Нет           | `pandas`              | Извлекает данные из всех листов            |
-| CSV    | `.csv`     | Нет           | `pandas`              | Преобразует в Markdown таблицу            |
-| Text   | `.txt`     | Нет           | (встроенные)          | Читает как обычный текст                     |
+Система поддерживает индексацию следующих форматов документов через конвертеры Haystack:
 
-**Примечание:** Файлы форматов `.doc`, `.json`, `.epub`, `.xls`, `.yml` скачиваются, но **в данный момент не парсятся** (для них нет реализованных парсеров в `src/chathrd/parsers/`). Парсер для них вернет `None`, и соответствующий `.md` файл не будет создан.
+| Формат | Расширение | Конвертер Haystack                  | Примечания                                 |
+| :----- | :--------- | :---------------------------------- | :----------------------------------------- |
+| PDF    | `.pdf`     | `PyPDFToDocument`                   | Извлекает текст и структуру из PDF документов |
+| DOCX   | `.docx`    | `DOCXToDocument`                    | Извлекает текст и таблицы из Word документов   |
+| XLSX   | `.xlsx`    | `ExcelToDocument`                   | Извлекает данные из Excel таблиц          |
+| CSV    | `.csv`     | `CSVToDocument`                     | Преобразует CSV данные в документы         |
+| Text   | `.txt`     | `TextFileToDocument`                | Обрабатывает текстовые файлы               |
+| DOC    | `.doc`     | `DOCToDocument`                     | Обрабатывает файлы старого формата Word    |
+| JSON   | `.json`    | `JSONToDocument`                    | Преобразует JSON данные в документы        |
+
+Документы в любом из указанных форматов автоматически обрабатываются пайплайном индексации и доступны для поиска.
+
+## Переменные окружения
+
+Для настройки приложения можно использовать следующие переменные окружения:
+
+- `DATA_DIR` - директория с данными
+- `DOWNLOADED_FILES_DIR` - директория с скачанными файлами
+- `CHROMA_INDEX_PATH` - путь к индексу Chroma
+- `BM25_INDEX_PATH` - путь к индексу BM25
+- `MODEL_NAME` - имя модели LLM
+- `LLM_API_URL` - URL для API LLM
+- `EMBEDDER_MODEL` - модель для создания эмбеддингов
+- `MAX_SPLIT_LENGTH` - максимальная длина фрагмента для индексации
+- `SPLIT_OVERLAP` - перекрытие фрагментов при индексации
+- `TOP_K_RETRIEVAL` - количество документов для поиска
+- `TOP_K_RANKER` - количество документов после ранжирования
+- `TEMPERATURE` - температура генерации
+- `MAX_TOKENS` - максимальное количество токенов для генерации
+- `TELEGRAM_BOT_TOKEN` - токен для Telegram бота
+
+## Устранение неполадок
+
+### Проблемы с ботом
+- **Бот не отвечает или работает некорректно**:
+  1. Проверьте, загружена ли модель: `sudo docker compose logs ollama`
+  2. Просмотрите логи бота: `sudo docker compose logs telegram_bot`
+  3. Перезапустите бота: `sudo docker compose restart telegram_bot`
+  4. Убедитесь, что LLM API доступен: `curl http://localhost:11434/api/health`
+
+### Ошибки индексации
+- **Ошибки при индексации документов**:
+  1. Проверьте наличие файлов: `sudo docker compose exec telegram_bot ls -la /app/data/downloaded_files`
+  2. Убедитесь, что достаточно места на диске: `df -h`
+  3. Запустите индексацию с подробным логированием: `sudo docker compose exec telegram_bot chathrd-index --log-level DEBUG`
+
+### Проблемы с производительностью
+- **Медленная работа модели**:
+  1. Проверьте использование GPU: `nvidia-smi`
+  2. Отрегулируйте количество слоев на GPU: измените `OLLAMA_GPU_LAYERS` в `.env`
+  3. Мониторьте использование ресурсов: `sudo docker stats`
+
+### Проблемы с Docker
+- **Конфликт портов**:
+  1. Проверьте, какие порты заняты: `sudo lsof -i -P -n | grep LISTEN`
+  2. Измените конфликтующие порты в `docker-compose.yml`
+- **Ошибки прав доступа**:
+  1. Проверьте права на директории данных: `sudo chmod -R 777 data/`
+  2. Запустите Docker с правами root: `sudo docker compose up -d`
+- **Контейнеры не запускаются**:
+  1. Проверьте статус: `sudo docker compose ps`
+  2. Посмотрите логи: `sudo docker compose logs`
+  3. Перезапустите с пересозданием: `sudo docker compose up -d --force-recreate`

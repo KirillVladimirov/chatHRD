@@ -116,11 +116,11 @@ docker-stop: ## Остановить запущенные контейнеры D
 	$(DOCKER_COMPOSE) stop
 
 # === Document Processing ===
-parse-docs: check-system-deps ## Парсить документы из списка
-	@echo "Парсинг документов..."
-	@mkdir -p data/parsed_files
+parse-docs: check-system-deps ## Индексировать документы с использованием Haystack
+	@echo "Индексация документов с использованием Haystack..."
+	@mkdir -p data/chroma_index
 	@PYTHONPATH=$(PYTHONPATH) python scripts/parse_documents.py
-	@echo "Результаты сохранены в data/parsed_files/"
+	@echo "Результаты сохранены в data/chroma_index/"
 
 check-system-deps: ## Проверить наличие системных зависимостей
 	@command -v dot >/dev/null 2>&1 || { echo "Требуется graphviz. Установите: sudo apt-get install graphviz"; exit 1; }
