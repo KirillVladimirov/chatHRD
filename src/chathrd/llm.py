@@ -3,11 +3,11 @@
 """
 import logging
 import os
-from typing import List, Dict, Any, Optional
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from openai import OpenAI
 
-from chathrd.rag import get_rag_system, RAGSystem
+from chathrd.pipelines.querying import create_querying_pipeline, process_query
 
 
 load_dotenv()
@@ -18,10 +18,10 @@ logger = logging.getLogger(__name__)
 class Client:
     """
     Клиент для взаимодействия с API Ollama для генерации текста с помощью LLM.
-    Поддерживает интеграцию с RAG (Retrieval-Augmented Generation) системой.
+    Поддерживает интеграцию с RAG (Retrieval-Augmented Generation) системой через современные пайплайны.
     """
     
-    def __init__(self, base_url: str = None, use_rag: bool = True, docs_dir: str = "data/parsed_files"):
+    def __init__(self, base_url: Optional[str] = None, use_rag: bool = True, docs_dir: str = "data/parsed_files"):
         """
         Инициализирует клиент для работы с Ollama API.
         
@@ -37,10 +37,7 @@ class Client:
         # Используем имя модели из переменной окружения или значение по умолчанию
         self.model = os.getenv("MODEL_NAME", "hf.co/ruslandev/llama-3-8b-gpt-4o-ru1.0-gguf:Q8_0")
         # Системный промпт для более контролируемых ответов
-        self.system_prompt = """Ты полезный ассистент. 
-Отвечай кратко и по существу на заданные вопросы.
-Отвечай только на текущий запрос пользователя.
-Если пользователь просто здоровается, ответь простым приветствием без дополнительной информации."""
+        self.system_prompt = "Ты полезный ассистент. Отвечай кратко и по существу на заданные вопросы. Отвечай только на текущий запрос пользователя. Всегда отвечай на русском языке. Если пользователь просто здоровается, ответь простым приветствием без дополнительной информации."
         
         # Инициализация клиента OpenAI
         try:
@@ -53,25 +50,30 @@ class Client:
             logger.error(f"Ошибка при инициализации клиента OpenAI: {e}")
             self.client = None
             
-        # Инициализация RAG системы
+        # Инициализация RAG пайплайна
         self.use_rag = use_rag
-        self.rag_system = None
+        self.querying_pipeline = None
         
         if self.use_rag:
             try:
-                logger.info("Инициализация RAG системы...")
-                self.rag_system = get_rag_system(docs_dir=docs_dir)
-                logger.info("RAG система успешно инициализирована")
+                logger.info("Инициализация пайплайна запросов...")
+                self.querying_pipeline = create_querying_pipeline(
+                    model_name=self.model,
+                    api_url=self.api_base,
+                    persist_path=os.path.join(os.path.dirname(docs_dir), "chroma_index"),
+                    bm25_path=os.path.join(os.path.dirname(docs_dir), "bm25.pkl"),
+                )
+                logger.info("Пайплайн запросов успешно инициализирован")
             except Exception as e:
-                logger.error(f"Ошибка при инициализации RAG системы: {e}")
+                logger.error(f"Ошибка при инициализации пайплайна запросов: {e}")
                 self.use_rag = False
 
     def generate_response(self, prompt: str) -> Optional[str]:
         """
         Генерирует ответ на запрос пользователя с использованием OpenAI API.
         
-        При наличии RAG системы, запрос сначала обрабатывается для поиска релевантной информации,
-        которая затем добавляется в контекст для LLM.
+        При наличии RAG системы, запрос сначала обрабатывается через пайплайн запросов,
+        который автоматически выполняет поиск по индексам и формирует контекстуальный ответ.
         
         Args:
             prompt: Текст запроса пользователя
@@ -84,57 +86,19 @@ class Client:
             return None
         
         # Проверяем, нужно ли использовать RAG
-        if self.use_rag and self.rag_system:
+        if self.use_rag and self.querying_pipeline:
             try:
-                # Получаем релевантные документы через RAG
-                rag_results = self.rag_system.query(prompt)
-                
-                # Если найдены релевантные документы, используем их для улучшения ответа
-                if rag_results:
-                    logger.info(f"RAG нашел {len(rag_results)} релевантных документов")
-                    
-                    # Формируем контекст для LLM с информацией из документов
-                    context_texts = []
-                    for i, result in enumerate(rag_results[:3], 1):  # Ограничиваем 3 документами
-                        content = result["content"]
-                        source = result["meta"].get("name", "Документ без названия")
-                        context_texts.append(f"Документ {i}: {content[:500]}... (Источник: {source})")
-                    
-                    context = "\n\n".join(context_texts)
-                    
-                    # Обновляем системный промпт с контекстом
-                    enhanced_system_prompt = f"""Ты полезный ассистент. Используй приведенную ниже информацию для ответа на вопрос пользователя.
-Старайся использовать только информацию из контекста. Если информации недостаточно, скажи что не можешь найти ответ.
-Всегда указывай источники информации в конце ответа.
-
---- КОНТЕКСТ ---
-{context}
---- КОНЕЦ КОНТЕКСТА ---
-
-Отвечай только на текущий запрос пользователя на основе предоставленного контекста."""
-                    
-                    # Вызываем LLM с расширенным промптом
-                    try:
-                        completion = self.client.chat.completions.create(
-                            model=self.model,
-                            messages=[
-                                {"role": "system", "content": enhanced_system_prompt},
-                                {"role": "user", "content": prompt}
-                            ],
-                            max_tokens=1000,
-                            temperature=0.7,
-                        )
-                        
-                        result = completion.choices[0].message.content
-                        logger.info(f"Получен ответ от LLM с RAG: {result[:100]}...")
-                        return result
-                    except Exception as e:
-                        logger.error(f"Ошибка при генерации ответа с RAG: {e}")
-                        # Если не удалось, пробуем обычный способ
+                # Обрабатываем запрос через пайплайн запросов
+                result = process_query(prompt, self.querying_pipeline)
+                if result and isinstance(result, Dict) and "answer" in result:
+                    answer = result["answer"]
+                    source = result.get("source_name", "пайплайн запросов")
+                    logger.info(f"Получен ответ от {source}: {answer[:100]}...")
+                    return answer
             except Exception as e:
-                logger.error(f"Ошибка при использовании RAG: {e}")
-                # Если RAG не сработал, продолжаем обычным способом
-            
+                logger.error(f"Ошибка при использовании пайплайна запросов: {e}")
+                # Если пайплайн не сработал, продолжаем обычным способом
+        
         # Стандартная генерация без RAG
         try:
             logger.info(f"Отправка запроса к LLM с промптом: {prompt}...")

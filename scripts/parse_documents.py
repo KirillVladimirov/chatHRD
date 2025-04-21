@@ -1,10 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+"""
+Скрипт для индексации документов с использованием современной системы на базе Haystack.
+Использует систему индексации chathrd-index вместо устаревших парсеров.
+"""
+
 import os
+import sys
 import logging
+import subprocess
 from pathlib import Path
-from chathrd.parsers.base import parse_file
 
 # Настройка логирования
 logging.basicConfig(
@@ -13,105 +19,71 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def get_files_to_process(input_dir: str, output_dir: str) -> list:
+def index_documents(input_dir: str, index_dir: str, bm25_path: str) -> bool:
     """
-    Получает список файлов, которые требуют обработки.
+    Запускает индексацию документов с использованием CLI команды chathrd-index.
     
     Args:
         input_dir: Директория с исходными файлами
-        output_dir: Директория с уже обработанными файлами
+        index_dir: Директория для сохранения индекса Chroma
+        bm25_path: Путь для сохранения BM25 индекса
     
     Returns:
-        list: Список путей к файлам, которые нужно обработать
+        bool: True если индексация успешна, иначе False
     """
-    # Получаем все файлы из директории с исходными документами
+    # Проверяем существование директории с исходными файлами
     input_path = Path(input_dir)
     if not input_path.exists():
         logger.error(f"Директория {input_dir} не существует")
-        return []
+        return False
     
     # Получаем список всех файлов в директории
-    all_files = [f for f in input_path.glob('*') if f.is_file()]
-    logger.info(f"Всего найдено {len(all_files)} файлов в {input_dir}")
+    files = [f for f in input_path.glob('*') if f.is_file()]
+    logger.info(f"Найдено {len(files)} файлов в {input_dir}")
     
-    # Получаем список уже обработанных файлов
-    output_path = Path(output_dir)
-    processed_files = set()
-    if output_path.exists():
-        # Извлекаем только названия файлов без расширения .md
-        processed_files = {f.stem for f in output_path.glob('*.md')}
-        logger.info(f"Найдено {len(processed_files)} уже обработанных файлов в {output_dir}")
+    if not files:
+        logger.warning(f"В директории нет файлов: {input_dir}")
+        return False
     
-    # Фильтруем список, исключая уже обработанные файлы
-    files_to_process = [f for f in all_files if f.stem not in processed_files]
+    # Создаем директории для результатов, если они не существуют
+    output_path = Path(index_dir)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Сортируем файлы по размеру (от меньшего к большему)
-    files_to_process.sort(key=lambda f: f.stat().st_size)
+    bm25_output_path = Path(bm25_path)
+    bm25_output_path.parent.mkdir(parents=True, exist_ok=True)
     
-    logger.info(f"Требуют обработки {len(files_to_process)} файлов (отсортированы от меньшего к большему)")
+    # Формируем команду для индексации
+    cmd = [
+        sys.executable, "-m", "chathrd.cli.index_command",
+        "--data-dir", input_dir,
+        "--index-dir", index_dir, 
+        "--bm25-path", bm25_path,
+        "--log-level", "INFO"
+    ]
     
-    return files_to_process
-
-def process_files(files: list, output_dir: str):
-    """
-    Обрабатывает файлы и сохраняет результаты в markdown формате.
-    
-    Args:
-        files: Список объектов Path для обработки
-        output_dir: Директория для сохранения результатов
-    """
-    # Создаем директорию для результатов, если она не существует
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    
-    # Счетчики для статистики
-    successful = 0
-    failed = 0
-    skipped = 0
-    total = len(files)
-    
-    # Обрабатываем каждый файл
-    for idx, file_path in enumerate(files, 1):
-        # Логируем прогресс с информацией о размере файла
-        file_size_mb = file_path.stat().st_size / (1024 * 1024)
-        logger.info(f"Обработка файла [{idx}/{total}]: {file_path} ({file_size_mb:.2f} МБ)")
-        
-        try:
-            # Парсим файл
-            content = parse_file(str(file_path))
-            
-            # Если содержимое None, значит файл не может быть обработан поддерживаемым парсером
-            if content is None:
-                logger.warning(f"[{idx}/{total}] Пропущен неподдерживаемый формат: {file_path}")
-                skipped += 1
-                continue
-                
-            # Сохраняем результат
-            output_file = output_path / f"{file_path.stem}.md"
-            with open(output_file, 'w', encoding='utf-8') as f:
-                f.write(content)
-                
-            logger.info(f"[{idx}/{total}] Успешно обработан файл: {file_path}")
-            successful += 1
-            
-        except Exception as e:
-            logger.error(f"[{idx}/{total}] Ошибка при обработке файла {file_path}: {e}")
-            failed += 1
-    
-    # Выводим итоговую статистику
-    logger.info(f"Обработка завершена. Успешно: {successful}, С ошибками: {failed}, Пропущено: {skipped}, Всего: {total}")
+    # Запускаем индексацию
+    logger.info(f"Запуск индексации для {len(files)} файлов...")
+    try:
+        result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+        logger.info("Индексация завершена успешно")
+        return True
+    except subprocess.CalledProcessError as e:
+        logger.error(f"Ошибка при индексации: {e}")
+        logger.error(f"Вывод команды: {e.stdout}")
+        logger.error(f"Ошибки: {e.stderr}")
+        return False
+    except Exception as e:
+        logger.error(f"Неожиданная ошибка: {e}")
+        return False
 
 if __name__ == "__main__":
     # Директории для входных и выходных файлов
     input_dir = "data/downloaded_files"
-    output_dir = "data/parsed_files"
+    index_dir = "data/chroma_index"
+    bm25_path = "data/bm25.pkl"
     
-    # Получаем список файлов для обработки
-    files_to_process = get_files_to_process(input_dir, output_dir)
+    # Запускаем индексацию
+    success = index_documents(input_dir, index_dir, bm25_path)
     
-    # Если есть файлы для обработки, обрабатываем их
-    if files_to_process:
-        logger.info(f"Начинаем обработку {len(files_to_process)} файлов...")
-        process_files(files_to_process, output_dir)
-    else:
-        logger.info("Нет новых файлов для обработки.") 
+    # Завершаем процесс с соответствующим кодом
+    sys.exit(0 if success else 1) 
