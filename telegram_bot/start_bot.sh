@@ -8,6 +8,10 @@ echo "================================================"
 echo "Скрипт start_bot.sh запущен в $(date)"
 echo "================================================"
 
+# Настраиваем PYTHONPATH
+export PYTHONPATH="/app:/app/src:${PYTHONPATH}"
+echo "PYTHONPATH установлен: $PYTHONPATH"
+
 # Сначала ждем, пока модель полностью загрузится
 echo "Ожидаем загрузки модели перед запуском бота..."
 bash "/app/wait_for_model.sh"
