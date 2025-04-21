@@ -32,8 +32,8 @@ class Settings:
     )
     
     # Настройки индексации
-    MAX_SPLIT_LENGTH: int = int(os.getenv("MAX_SPLIT_LENGTH", "500"))
-    SPLIT_OVERLAP: int = int(os.getenv("SPLIT_OVERLAP", "100"))
+    MAX_SPLIT_LENGTH: int = int(os.getenv("MAX_SPLIT_LENGTH", "200"))
+    SPLIT_OVERLAP: int = int(os.getenv("SPLIT_OVERLAP", "50"))
     
     # Настройки поиска
     TOP_K_RETRIEVAL: int = int(os.getenv("TOP_K_RETRIEVAL", "5"))
