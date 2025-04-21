@@ -102,8 +102,8 @@ cleaner = DocumentCleaner(
 )
 splitter = DocumentSplitter(
     split_by="word",
-    split_length=500, 
-    split_overlap=100
+    split_length=200, 
+    split_overlap=50
 )
 embedder = SentenceTransformersDocumentEmbedder("sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2")
 embedding_writer = DocumentWriter(document_store=embedding_store)

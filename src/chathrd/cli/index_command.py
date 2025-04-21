@@ -28,17 +28,17 @@ def parse_arguments() -> argparse.Namespace:
     )
     parser.add_argument(
         "--data-dir", 
-        default="../data/downloaded_files",
+        default="data/downloaded_files",
         help="Директория с файлами для индексации (если не указаны конкретные файлы)."
     )
     parser.add_argument(
         "--index-dir",
-        default="../data/chroma_index",
+        default="data/chroma_index",
         help="Директория для сохранения индекса."
     )
     parser.add_argument(
         "--bm25-path",
-        default="../data/bm25.pkl",
+        default="data/bm25.pkl",
         help="Путь для сохранения BM25 индекса."
     )
     parser.add_argument(

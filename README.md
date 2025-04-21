@@ -211,6 +211,9 @@ sudo docker compose exec telegram_bot chathrd-query "Порядок оформл
 
 # Указание нестандартных путей к индексам
 sudo docker compose exec telegram_bot chathrd-query "Процесс увольнения" --index-dir /path/to/index --bm25-path /path/to/bm25.pkl
+
+# Запуск локально (не в Docker)
+chathrd-query "Где найти инструкцию по подаче заявления на льготы?" --api-url http://localhost:11434/v1
 ```
 
 Основные опции:
