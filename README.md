@@ -125,6 +125,23 @@
     
     Убедитесь, что сервисы `db`, `ollama`, `model_initializer` и `telegram_bot` имеют статус `running` или `completed` (для `model_initializer`).
 
+8.  **Альтернативный запуск бота (локально):**
+    ```bash
+    # Установка зависимостей
+    pip install -e .
+    
+    # Запуск бота
+    python telegram_bot/bot.py
+    ```
+    
+    Примечание: перед запуском убедитесь, что:
+    - Ollama сервис запущен и доступен по адресу http://localhost:11434
+    - В файле .env указаны корректные настройки для локального запуска:
+      ```
+      MODEL_NAME="hf.co/IlyaGusev/saiga_yandexgpt_8b_gguf:Q4_0"
+      LLM_API_URL="http://localhost:11434"
+      ```
+
 ## Работа с проектом
 
 ### Просмотр логов

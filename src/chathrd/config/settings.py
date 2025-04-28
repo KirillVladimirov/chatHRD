@@ -46,7 +46,7 @@ class Settings:
     # Настройки генерации
     TEMPERATURE: float = float(os.getenv("TEMPERATURE", "0.8"))
     MAX_TOKENS: int = int(os.getenv("MAX_TOKENS", "1000"))
-    TIMEOUT: int = int(os.getenv("TIMEOUT", "60"))
+    TIMEOUT: int = int(os.getenv("TIMEOUT", "180"))
     
     # Настройки Telegram бота
     TELEGRAM_BOT_TOKEN: Optional[str] = os.getenv("TELEGRAM_BOT_TOKEN")

@@ -24,7 +24,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir wheel && \
     pip install --no-cache-dir ".[dev]" && \
     pip install --no-cache-dir -e . && \
-    pip install --no-cache-dir openai>=1.0.0 && \
+    pip install --no-cache-dir openai>=1.0.0 haystack-ai[all]>=2.12.2 chroma-haystack>=3.0.0 && \
     pip install --no-cache-dir psycopg2-binary
 
 # Второй этап: создание финального образа
@@ -73,10 +73,7 @@ RUN chmod +x /app/wait_for_model.sh /app/telegram_bot/start_bot.sh
 
 # Настраиваем переменные окружения
 ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH="/app:/app/src:${PYTHONPATH}"
-
-# Устанавливаем дополнительные зависимости
-RUN pip install psycopg2-binary
+ENV PYTHONPATH="/app:/app/src"
 
 # Запускаем скрипт, который дождется загрузки модели и затем запустит бота
 ENTRYPOINT ["/bin/bash"]

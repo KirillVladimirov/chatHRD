@@ -58,7 +58,7 @@ def create_querying_pipeline(
         generation_kwargs={
             "temperature": settings.TEMPERATURE, 
             "max_tokens": settings.MAX_TOKENS, 
-            "timeout": settings.TIMEOUT
+            "timeout": 240
         }
     )
     logger.debug(f"Настроен генератор диалогов с параметрами: temp={settings.TEMPERATURE}, max_tokens={settings.MAX_TOKENS}")
@@ -70,7 +70,7 @@ def create_querying_pipeline(
         generation_kwargs={
             "temperature": settings.TEMPERATURE, 
             "max_tokens": settings.MAX_TOKENS, 
-            "timeout": settings.TIMEOUT
+            "timeout": 240
         }
     )
     logger.debug("Настроен генератор RAG-ответов")
@@ -82,7 +82,7 @@ def create_querying_pipeline(
         generation_kwargs={
             "temperature": settings.TEMPERATURE, 
             "max_tokens": settings.MAX_TOKENS, 
-            "timeout": settings.TIMEOUT
+            "timeout": 240
         }
     )
     logger.debug("Настроен генератор мульти-запросов")

@@ -18,14 +18,14 @@ from telegram.constants import ChatAction
 
 # Настраиваем журналирование перед импортом других модулей
 # Создаем директорию для логов, если её нет
-os.makedirs("/app/logs", exist_ok=True)
+os.makedirs("logs", exist_ok=True)
 
 # Настраиваем логирование в файл и консоль
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     level=logging.INFO,
     handlers=[
-        logging.FileHandler("/app/logs/bot.log"),
+        logging.FileHandler("logs/bot.log"),
         logging.StreamHandler()
     ]
 )
@@ -54,6 +54,8 @@ if not TELEGRAM_BOT_TOKEN:
 # Настройки API для LLM
 MODEL_NAME = os.getenv("MODEL_NAME", settings.MODEL_NAME)
 API_URL = os.getenv("LLM_API_URL", settings.LLM_API_URL)
+if not API_URL.endswith("/v1"):
+    API_URL = f"{API_URL}/v1"
 PERSIST_PATH = os.getenv("CHROMA_INDEX_PATH", settings.CHROMA_INDEX_PATH)
 BM25_PATH = os.getenv("BM25_INDEX_PATH", settings.BM25_INDEX_PATH)
 
